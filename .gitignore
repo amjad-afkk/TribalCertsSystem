@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Production builds
+dist/
+build/
+
+# Environment
+.env
+.env.local
+
+# Databases and runtime data
+*.sqlite
+*.sqlite3
+*.db-journal
+server/data/*.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# System files
+.DS_Store
+Thumbs.db

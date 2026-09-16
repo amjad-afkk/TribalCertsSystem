@@ -1,0 +1,16 @@
+{
+  "name": "mota-scholarship-management-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-Enabled Unified Scholarship and Fellowship Management System for MoTA (SIH)",
+  "scripts": {
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "test": "npm --prefix server test",
+    "build": "npm --prefix server run build && npm --prefix client run build",
+    "seed": "npm --prefix server run seed"
+  },
+  "keywords": ["sih", "mota", "scholarship", "fellowship", "ai", "gemini"],
+  "author": "SIH Team",
+  "license": "UNLICENSED"
+}
