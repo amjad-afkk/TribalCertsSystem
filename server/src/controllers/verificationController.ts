@@ -1,0 +1,90 @@
+import { Request, Response } from 'express';
+import { getDb } from '../db/connection.js';
+
+export const reviewApplication = (req: Request, res: Response) => {
+  try {
+    const db = getDb();
+    const appId = req.params.id;
+    const { tier, action, comments, reviewerId, reviewerName } = req.body;
+
+    const app = db.prepare('SELECT * FROM applications WHERE id = ?').get(appId) as any;
+    if (!app) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+
+    let nextStatus = app.status;
+    let nextStage = app.current_stage;
+    let explainableStatus = app.explainable_status;
+    let deficiencyReason: string | null = null;
+
+    if (action === 'APPROVED') {
+      if (tier === 'INO') {
+        nextStatus = 'UNDER_SCRUTINY';
+        nextStage = 'STATE_SCRUTINY';
+        explainableStatus = 'Institute Nodal Officer (INO) has verified enrollment and bona fide student credentials. Forwarded to State/Ministry scrutiny.';
+      } else if (tier === 'STATE_NODAL') {
+        nextStatus = 'VERIFIED';
+        nextStage = 'COMMITTEE_REVIEW';
+        explainableStatus = 'State Nodal Officer scrutiny complete. Eligible and queued for Selection Committee merit review / quota allocation.';
+      } else if (tier === 'MOTA_ADMIN') {
+        nextStatus = 'SHORTLISTED';
+        nextStage = 'SELECTION_FINALIZED';
+        explainableStatus = 'MoTA administrative verification completed successfully.';
+      }
+    } else if (action === 'FLAGGED_DEFICIENCY') {
+      nextStatus = 'DEFICIENCY_FLAGGED';
+      deficiencyReason = comments || 'Document inconsistency or clarification required.';
+      explainableStatus = `Deficiency flagged by ${tier}: "${comments}". Application returned to applicant for resubmission.`;
+    } else if (action === 'REJECTED') {
+      nextStatus = 'REJECTED';
+      explainableStatus = `Application rejected by ${tier}. Reason: ${comments}`;
+    }
+
+    // Update application
+    db.prepare(`
+      UPDATE applications
+      SET status = ?, current_stage = ?, explainable_status = ?,
+          deficiency_reason = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(nextStatus, nextStage, explainableStatus, deficiencyReason, appId);
+
+    // Insert verification stage record
+    const stageId = `vstage-${Date.now()}`;
+    db.prepare(`
+      INSERT INTO verification_stages (
+        id, application_id, tier, reviewer_id, reviewer_name, action, comments
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      stageId,
+      appId,
+      tier || 'INO',
+      reviewerId || 'REV-001',
+      reviewerName || 'Nodal Verification Officer',
+      action,
+      comments || ''
+    );
+
+    // Insert audit log
+    db.prepare(`
+      INSERT INTO audit_logs (id, entity_type, entity_id, actor, action, details)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      `audit-${Date.now()}`,
+      'APPLICATION',
+      appId,
+      reviewerName || 'VERIFIER',
+      `APPLICATION_${action}`,
+      `Action ${action} taken at stage ${tier}. Notes: ${comments}`
+    );
+
+    res.json({
+      success: true,
+      message: `Verification action ${action} recorded successfully`,
+      newStatus: nextStatus,
+      newStage: nextStage,
+      explainableStatus
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
