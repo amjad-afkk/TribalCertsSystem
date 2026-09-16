@@ -13,6 +13,50 @@ import { RegionalChatbot } from './components/chatbot/RegionalChatbot';
 import { api } from './services/api';
 import type { Applicant } from './types';
 
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('ErrorBoundary caught error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '2rem', maxWidth: '800px', margin: '2rem auto', backgroundColor: '#FDF0ED', border: '1px solid #F7B8B8', borderRadius: '8px' }}>
+          <h2 style={{ color: '#A61C1C', marginBottom: '0.75rem' }}>Application Render Issue Detected</h2>
+          <p style={{ color: '#742A2A', marginBottom: '1rem', fontSize: '0.875rem' }}>
+            {this.state.error?.message || 'An unexpected rendering error occurred.'}
+          </p>
+          <button
+            onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
+            className="btn btn-primary btn-sm"
+          >
+            Reload Portal
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<string>('applicant');
   const [currentRole, setCurrentRole] = useState<string>('applicant-pooja');
@@ -78,43 +122,45 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <main style={{ flex: 1, padding: '1.75rem 0' }}>
-        <div className="container">
-          {currentTab === 'applicant' && (
-            <ApplicantPortal
-              currentRole={currentRole}
-              onOpenApplyModal={() => {
-                setDefaultApplySchemeCode(undefined);
-                setIsApplyModalOpen(true);
-              }}
-            />
-          )}
+      <ErrorBoundary>
+        <main style={{ flex: 1, padding: '1.75rem 0' }}>
+          <div className="container">
+            {currentTab === 'applicant' && (
+              <ApplicantPortal
+                currentRole={currentRole}
+                onOpenApplyModal={() => {
+                  setDefaultApplySchemeCode(undefined);
+                  setIsApplyModalOpen(true);
+                }}
+              />
+            )}
 
-          {currentTab === 'simulator' && (
-            <ScholarshipTwin onSelectSchemeToApply={handleApplyFromSimulator} />
-          )}
+            {currentTab === 'simulator' && (
+              <ScholarshipTwin onSelectSchemeToApply={handleApplyFromSimulator} />
+            )}
 
-          {currentTab === 'waterfall' && (
-            <SpilloverVisualizer />
-          )}
+            {currentTab === 'waterfall' && (
+              <SpilloverVisualizer />
+            )}
 
-          {currentTab === 'verification' && (
-            <VerificationQueue currentRole={currentRole} />
-          )}
+            {currentTab === 'verification' && (
+              <VerificationQueue currentRole={currentRole} />
+            )}
 
-          {currentTab === 'committee' && (
-            <CommitteeSelectionPortal />
-          )}
+            {currentTab === 'committee' && (
+              <CommitteeSelectionPortal />
+            )}
 
-          {currentTab === 'analytics' && (
-            <AdminAnalytics />
-          )}
+            {currentTab === 'analytics' && (
+              <AdminAnalytics />
+            )}
 
-          {currentTab === 'scheme-config' && (
-            <SchemeConfigurator />
-          )}
-        </div>
-      </main>
+            {currentTab === 'scheme-config' && (
+              <SchemeConfigurator />
+            )}
+          </div>
+        </main>
+      </ErrorBoundary>
 
       {/* Dynamic Application Modal */}
       {isApplyModalOpen && (

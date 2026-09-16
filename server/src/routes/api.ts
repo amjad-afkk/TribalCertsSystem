@@ -51,8 +51,25 @@ router.get('/analytics', getMoTaAnalytics);
 router.get('/applicants', (req, res) => {
   try {
     const db = getDb();
-    const rows = db.prepare('SELECT * FROM applicants ORDER BY name ASC').all();
-    res.json({ success: true, count: rows.length, data: rows });
+    const rows = db.prepare('SELECT * FROM applicants ORDER BY name ASC').all() as any[];
+    const mapped = rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      phone: r.phone,
+      aadhaarMasked: r.aadhaar_masked,
+      category: r.category,
+      isPwD: Boolean(r.is_pwd),
+      isPVTG: Boolean(r.is_pvtg),
+      gender: r.gender,
+      annualIncome: r.annual_income ?? 0,
+      state: r.state,
+      district: r.district,
+      instituteName: r.institute_name,
+      courseLevel: r.course_level,
+      academicPercentage: r.academic_percentage ?? 0
+    }));
+    res.json({ success: true, count: mapped.length, data: mapped });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
