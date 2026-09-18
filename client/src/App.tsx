@@ -302,7 +302,7 @@ export const App: React.FC = () => {
         <main style={{ flex: 1, padding: '1.75rem 0' }}>
           <div className="container">
             {/* Public National Portal Entry & Login Gateway */}
-            {(!currentUser || currentTab === 'login') && (
+            {((!currentUser && currentTab !== 'simulator') || currentTab === 'login') && (
               <LandingLoginPage
                 onLoginSuccess={handleLoginSuccess}
                 onExploreSimulator={() => setCurrentTab('simulator')}
@@ -320,16 +320,31 @@ export const App: React.FC = () => {
               />
             )}
 
-            {currentTab === 'fellowship' && (
+            {/* Authenticated Citizen Fellowship Lifecycle */}
+            {currentUser && currentTab === 'fellowship' && (
               <FellowshipPortal applicantId={activeApplicantId} />
             )}
 
+            {/* Public or Authenticated Eligibility Simulator */}
             {currentTab === 'simulator' && (
               <ScholarshipTwin onSelectSchemeToApply={handleApplyFromSimulator} />
             )}
 
+            {/* Selection Committee Spillover Waterfall */}
             {currentTab === 'waterfall' && (
-              <SpilloverVisualizer />
+              <RoleGuard
+                allowedRoles={['COMMITTEE', 'MOTA_ADMIN']}
+                currentRole={currentRole}
+                currentUser={currentUser}
+                onOpenLogin={() => handleOpenLogin('officer')}
+                onSwitchPersona={handleSwitchPersona}
+                featureName="National Spillover Waterfall Allocation"
+                requiredClearanceLabel="National Selection Committee Member / MoTA Admin"
+                suggestedPersonaId="committee-member"
+                suggestedPersonaName="Selection Committee Chair"
+              >
+                <SpilloverVisualizer />
+              </RoleGuard>
             )}
 
             {currentTab === 'verification' && (

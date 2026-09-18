@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import type { ApplicationItem, Applicant } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
+import { QrVerificationModal } from '../common/QrVerificationModal';
 import {
   FileText, AlertTriangle, CheckCircle, Clock,
-  PlusCircle, RefreshCw, Send
+  PlusCircle, RefreshCw, Send, QrCode
 } from 'lucide-react';
 
 interface ApplicantPortalProps {
@@ -15,6 +16,9 @@ interface ApplicantPortalProps {
 export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, onOpenApplyModal }) => {
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [applicant, setApplicant] = useState<Applicant | null>(null);
+  const [digiLockerDocs, setDigiLockerDocs] = useState<any[]>([]);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [selectedQrDoc, setSelectedQrDoc] = useState<{ title: string; docUri: string; certNo: string; issuer: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [resubmitText, setResubmitText] = useState('');
   const [resubmitSuccess, setResubmitSuccess] = useState(false);
@@ -30,9 +34,10 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
   const loadData = async () => {
     setLoading(true);
     try {
-      const [appResp, applicantsResp] = await Promise.all([
+      const [appResp, applicantsResp, dglResp] = await Promise.all([
         api.getApplications({ applicantId }),
-        api.getApplicants()
+        api.getApplicants(),
+        api.getDigiLockerDocuments(applicantId)
       ]);
 
       if (appResp.success && Array.isArray(appResp.data)) {
@@ -41,6 +46,9 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
       if (applicantsResp.success && Array.isArray(applicantsResp.data)) {
         const found = applicantsResp.data.find((a: any) => a.id === applicantId);
         if (found) setApplicant(found);
+      }
+      if (dglResp.success && Array.isArray(dglResp.data)) {
+        setDigiLockerDocs(dglResp.data);
       }
     } catch (err) {
       console.error('Error fetching applicant data:', err);
@@ -113,6 +121,73 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
           </button>
         </div>
       </div>
+
+      {/* DigiLocker Pre-Verified Digital Vault (FR-1.2, Section 5.4) */}
+      {digiLockerDocs.length > 0 && (
+        <div className="gov-card" style={{ padding: '1rem 1.25rem', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ backgroundColor: '#166534', color: '#FFFFFF', borderRadius: '4px', padding: '0.2rem 0.4rem', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.04em' }}>
+                DIGILOCKER
+              </div>
+              <h3 style={{ fontSize: '0.9375rem', color: '#166534', margin: 0, fontWeight: 700 }}>
+                Pre-Verified Digital Locker Vault ({digiLockerDocs.length} Certificates Linked)
+              </h3>
+            </div>
+            <span style={{ fontSize: '0.75rem', color: '#15803D', fontWeight: 500 }}>
+              Tamper-Proof National Vault Link Active
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '0.75rem' }}>
+            {digiLockerDocs.map((doc: any) => (
+              <div
+                key={doc.id}
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '6px',
+                  border: '1px solid #DCFCE7',
+                  padding: '0.75rem 1rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#0A2540' }}>
+                    {doc.title}
+                  </div>
+                  <div style={{ fontSize: '0.6875rem', color: '#64748B', marginTop: '0.15rem' }}>
+                    Issued: {doc.issueDate} • {doc.issuer.split(',')[0]}
+                  </div>
+                  <div style={{ fontSize: '0.6875rem', color: '#15803D', fontWeight: 600, marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <CheckCircle size={11} /> Digitally Signed & Sealed
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedQrDoc({
+                      title: doc.title,
+                      docUri: doc.docUri,
+                      certNo: doc.verifiedData?.casteCertNumber || 'ST-PVTG-2026-9912',
+                      issuer: doc.issuer
+                    });
+                    setIsQrModalOpen(true);
+                  }}
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: '0.6875rem', padding: '0.35rem 0.65rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', borderColor: '#86EFAC', color: '#166534', backgroundColor: '#F0FDF4' }}
+                >
+                  <QrCode size={12} />
+                  <span>Verify QR Seal</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Applications Section */}
       <div>
@@ -307,6 +382,18 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
           </div>
         )}
       </div>
+
+      {/* QR Code PKI Verification Modal (Section 5.4) */}
+      {selectedQrDoc && (
+        <QrVerificationModal
+          isOpen={isQrModalOpen}
+          onClose={() => setIsQrModalOpen(false)}
+          documentTitle={selectedQrDoc.title}
+          docUri={selectedQrDoc.docUri}
+          certificateNumber={selectedQrDoc.certNo}
+          issuer={selectedQrDoc.issuer}
+        />
+      )}
     </div>
   );
 };

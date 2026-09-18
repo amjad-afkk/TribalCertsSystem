@@ -182,19 +182,28 @@ export const signOffSelection = (req: Request, res: Response) => {
     const { schemeId, applicationId, committeeMember, comments } = req.body;
     const actorRole = (req as any).userRole || 'COMMITTEE';
 
-    const now = new Date().toISOString();
+    const targetId = applicationId || schemeId;
+    if (!targetId) {
+      return res.status(400).json({
+        success: false,
+        error: 'INVALID_REQUEST',
+        message: 'applicationId or schemeId is required for committee sign-off'
+      });
+    }
 
-    db.prepare(`
-      UPDATE applications
-      SET status = 'SELECTED',
-          current_stage = 'SELECTION_FINALIZED',
-          explainable_status = ?,
-          updated_at = datetime('now')
-      WHERE id = ?
-    `).run(
-      `Selection Committee has formally signed off and approved fellowship award. Next: PFMS-DBT disbursement mandate generation.`,
-      applicationId
-    );
+    if (applicationId) {
+      db.prepare(`
+        UPDATE applications
+        SET status = 'SELECTED',
+            current_stage = 'SELECTION_FINALIZED',
+            explainable_status = ?,
+            updated_at = datetime('now')
+        WHERE id = ?
+      `).run(
+        `Selection Committee has formally signed off and approved fellowship award. Next: PFMS-DBT disbursement mandate generation.`,
+        applicationId
+      );
+    }
 
     // Audit log with actor role
     db.prepare(`
@@ -203,7 +212,7 @@ export const signOffSelection = (req: Request, res: Response) => {
     `).run(
       `audit-${Date.now()}`,
       'APPLICATION',
-      applicationId,
+      targetId,
       `${committeeMember || 'SELECTION_COMMITTEE_CHAIR'} (Role: ${actorRole})`,
       'COMMITTEE_SIGN_OFF',
       `Selection finalized by committee. Rationale: ${comments || 'Merit and reservation criteria satisfied.'}`
