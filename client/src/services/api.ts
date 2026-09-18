@@ -1,4 +1,5 @@
-const API_BASE = 'http://localhost:4000/api';
+const DEFAULT_BASE = import.meta.env.VITE_API_BASE || '/api';
+let API_BASE = DEFAULT_BASE;
 
 let activeUserRole: string = 'applicant-pooja';
 
@@ -16,180 +17,204 @@ const getHeaders = (extra: Record<string, string> = {}): Record<string, string> 
   };
 };
 
+const safeFetch = async (endpoint: string, options: RequestInit = {}): Promise<any> => {
+  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
+  try {
+    let res = await fetch(url, options);
+
+    // If proxied /api fails with 404 or connection error and API_BASE was relative, try direct localhost:4000
+    if (!res.ok && res.status === 404 && API_BASE === '/api') {
+      try {
+        const directUrl = `http://localhost:4000/api${endpoint}`;
+        const fallbackRes = await fetch(directUrl, options);
+        if (fallbackRes.ok || fallbackRes.status < 500) {
+          res = fallbackRes;
+          API_BASE = 'http://localhost:4000/api';
+        }
+      } catch {
+        // keep original response
+      }
+    }
+
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      return await res.json();
+    }
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      if (res.ok) return { success: true, data: text };
+      return { success: false, message: text || `HTTP ${res.status}: ${res.statusText}` };
+    }
+  } catch (err: any) {
+    // If relative fetch failed entirely (e.g. proxy issue), attempt direct localhost:4000
+    if (API_BASE === '/api') {
+      try {
+        const directUrl = `http://localhost:4000/api${endpoint}`;
+        const fallbackRes = await fetch(directUrl, options);
+        API_BASE = 'http://localhost:4000/api';
+        const contentType = fallbackRes.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          return await fallbackRes.json();
+        }
+        return { success: fallbackRes.ok, message: await fallbackRes.text() };
+      } catch (fallbackErr: any) {
+        console.error(`[API Network Error] ${options.method || 'GET'} ${url}:`, fallbackErr);
+        return {
+          success: false,
+          error: 'NETWORK_ERROR',
+          message: 'Unable to connect to backend service. Please verify server is running on port 4000.'
+        };
+      }
+    }
+
+    console.error(`[API Network Error] ${options.method || 'GET'} ${url}:`, err);
+    return {
+      success: false,
+      error: 'NETWORK_ERROR',
+      message: err?.message || 'Unable to connect to backend service.'
+    };
+  }
+};
+
 export const api = {
   // Schemes
   getSchemes: async () => {
-    const res = await fetch(`${API_BASE}/schemes`, {
-      headers: getHeaders()
-    });
-    return res.json();
+    return safeFetch('/schemes', { headers: getHeaders() });
   },
   getSchemeById: async (id: string) => {
-    const res = await fetch(`${API_BASE}/schemes/${id}`, {
-      headers: getHeaders()
-    });
-    return res.json();
+    return safeFetch(`/schemes/${id}`, { headers: getHeaders() });
   },
   createScheme: async (schemeData: any) => {
-    const res = await fetch(`${API_BASE}/schemes`, {
+    return safeFetch('/schemes', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(schemeData)
     });
-    return res.json();
   },
 
   // Simulator
   runSimulator: async (criteria: any) => {
-    const res = await fetch(`${API_BASE}/simulator/match`, {
+    return safeFetch('/simulator/match', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(criteria)
     });
-    return res.json();
   },
 
   // Applications
   getApplications: async (params?: Record<string, string>) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-    const res = await fetch(`${API_BASE}/applications${qs}`, {
-      headers: getHeaders()
-    });
-    return res.json();
+    return safeFetch(`/applications${qs}`, { headers: getHeaders() });
   },
   getApplicationById: async (id: string) => {
-    const res = await fetch(`${API_BASE}/applications/${id}`, {
-      headers: getHeaders()
-    });
-    return res.json();
+    return safeFetch(`/applications/${id}`, { headers: getHeaders() });
   },
   submitApplication: async (payload: any) => {
-    const res = await fetch(`${API_BASE}/applications`, {
+    return safeFetch('/applications', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload)
     });
-    return res.json();
   },
   resubmitDeficiency: async (id: string, payload: { explanation: string }) => {
-    const res = await fetch(`${API_BASE}/applications/${id}/resubmit`, {
+    return safeFetch(`/applications/${id}/resubmit`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload)
     });
-    return res.json();
   },
 
   // Verification review
   reviewApplication: async (id: string, payload: any) => {
-    const res = await fetch(`${API_BASE}/applications/${id}/review`, {
+    return safeFetch(`/applications/${id}/review`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload)
     });
-    return res.json();
   },
 
   // Document OCR extraction & check
   extractAndVerifyDocument: async (payload: any) => {
-    const res = await fetch(`${API_BASE}/documents/extract`, {
+    return safeFetch('/documents/extract', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload)
     });
-    return res.json();
   },
 
   // Selection Waterfalls
   runWaterfallSimulation: async (payload?: any) => {
-    const res = await fetch(`${API_BASE}/selection/waterfall`, {
+    return safeFetch('/selection/waterfall', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload || {})
     });
-    return res.json();
   },
   runNosSelection: async () => {
-    const res = await fetch(`${API_BASE}/selection/nos`, {
-      headers: getHeaders()
-    });
-    return res.json();
+    return safeFetch('/selection/nos', { headers: getHeaders() });
   },
   signOffSelection: async (payload: any) => {
-    const res = await fetch(`${API_BASE}/selection/sign-off`, {
+    return safeFetch('/selection/sign-off', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload)
     });
-    return res.json();
   },
 
   // Analytics
   getAnalytics: async () => {
-    const res = await fetch(`${API_BASE}/analytics`, {
-      headers: getHeaders()
-    });
-    return res.json();
+    return safeFetch('/analytics', { headers: getHeaders() });
   },
 
   // Applicants
   getApplicants: async () => {
-    const res = await fetch(`${API_BASE}/applicants`, {
-      headers: getHeaders()
-    });
-    return res.json();
+    return safeFetch('/applicants', { headers: getHeaders() });
   },
 
   // AI Regional Chatbot
   chatWithBot: async (payload: { message: string; language: string }) => {
-    const res = await fetch(`${API_BASE}/chatbot`, {
+    return safeFetch('/chatbot', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload)
     });
-    return res.json();
   },
 
   // Authentication & Identity (Citizen Aadhaar OTP + Officer SSO)
   sendOtp: async (payload: { identifier?: string; personaId?: string }) => {
-    const res = await fetch(`${API_BASE}/auth/send-otp`, {
+    return safeFetch('/auth/send-otp', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload)
     });
-    return res.json();
   },
   verifyOtp: async (payload: { sessionId: string; otp: string }) => {
-    const res = await fetch(`${API_BASE}/auth/verify-otp`, {
+    return safeFetch('/auth/verify-otp', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload)
     });
-    return res.json();
   },
   officerLogin: async (payload: { designation: string; officerId?: string; pin?: string }) => {
-    const res = await fetch(`${API_BASE}/auth/officer-login`, {
+    return safeFetch('/auth/officer-login', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload)
     });
-    return res.json();
   },
 
   // Post-Selection Fellowship Lifecycle Management (FR-7.1 to FR-7.5)
   getFellowshipRecord: async (applicantId: string) => {
-    const res = await fetch(`${API_BASE}/fellowship/${applicantId}`, {
-      headers: getHeaders()
-    });
-    return res.json();
+    return safeFetch(`/fellowship/${applicantId}`, { headers: getHeaders() });
   },
   submitJoiningReport: async (payload: { fellowshipId: string; supervisorName: string; joiningReportUrl?: string }) => {
-    const res = await fetch(`${API_BASE}/fellowship/joining`, {
+    return safeFetch('/fellowship/joining', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload)
     });
-    return res.json();
   },
   submitContinuationReport: async (payload: {
     fellowshipId: string;
@@ -198,60 +223,49 @@ export const api = {
     attendancePercentage: number;
     progressSummary: string;
   }) => {
-    const res = await fetch(`${API_BASE}/fellowship/continuation`, {
+    return safeFetch('/fellowship/continuation', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload)
     });
-    return res.json();
   },
   submitThesis: async (payload: { fellowshipId: string; thesisTitle: string; synopsisSummary?: string }) => {
-    const res = await fetch(`${API_BASE}/fellowship/thesis`, {
+    return safeFetch('/fellowship/thesis', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload)
     });
-    return res.json();
   },
 
   // DigiLocker Integration & QR Verification (FR-1.2, Section 5.4)
   getDigiLockerDocuments: async (applicantId?: string) => {
     const qs = applicantId ? `?applicantId=${encodeURIComponent(applicantId)}` : '';
-    const res = await fetch(`${API_BASE}/digilocker/documents${qs}`, {
-      headers: getHeaders()
-    });
-    return res.json();
+    return safeFetch(`/digilocker/documents${qs}`, { headers: getHeaders() });
   },
   verifyCertificateQr: async (payload: { docUri: string; certificateNumber?: string; issuer?: string }) => {
-    const res = await fetch(`${API_BASE}/digilocker/verify-qr`, {
+    return safeFetch('/digilocker/verify-qr', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload)
     });
-    return res.json();
   },
 
   // Multi-Channel Notifications (FR-4.6, §6.8)
   getNotifications: async (recipientId?: string) => {
     const qs = recipientId ? `?recipientId=${encodeURIComponent(recipientId)}` : '';
-    const res = await fetch(`${API_BASE}/notifications${qs}`, {
-      headers: getHeaders()
-    });
-    return res.json();
+    return safeFetch(`/notifications${qs}`, { headers: getHeaders() });
   },
   markNotificationRead: async (id: string) => {
-    const res = await fetch(`${API_BASE}/notifications/${id}/read`, {
+    return safeFetch(`/notifications/${id}/read`, {
       method: 'PATCH',
       headers: getHeaders()
     });
-    return res.json();
   },
   sendTestNudge: async (payload: { recipientId: string; channel?: string; title: string; message: string }) => {
-    const res = await fetch(`${API_BASE}/notifications/test-nudge`, {
+    return safeFetch('/notifications/test-nudge', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload)
     });
-    return res.json();
   }
 };

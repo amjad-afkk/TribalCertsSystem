@@ -9,12 +9,16 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Enable CORS for frontend Vite client
+// Enable CORS for frontend Vite client with full header & origin support
 app.use(cors({
-  origin: '*',
+  origin: true,
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Role', 'x-user-role', 'X-Persona-Id', 'x-persona-id', 'Accept', 'Origin', 'X-Requested-With']
 }));
+
+// Preflight handler for all routes
+app.options('*', cors());
 
 // Generous body limit for image/document base64 upload
 app.use(express.json({ limit: '20mb' }));
