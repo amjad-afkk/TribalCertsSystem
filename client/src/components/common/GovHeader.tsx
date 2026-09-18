@@ -36,6 +36,13 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
 
   // Compute tabs strictly filtered by the active user's authorized role
   const getNavTabs = () => {
+    if (!currentUser) {
+      return [
+        { id: 'login', label: 'Portal Gateway / Sign In', icon: Lock },
+        { id: 'simulator', label: 'Eligibility Simulator (Public)', icon: Sparkles }
+      ];
+    }
+
     switch (role) {
       case 'INO':
         return [
@@ -65,7 +72,7 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
       case 'APPLICANT':
       default:
         return [
-          { id: 'applicant', label: 'Applicant Dashboard', icon: UserCheck },
+          { id: 'applicant', label: 'My Applications', icon: UserCheck },
           { id: 'simulator', label: 'Eligibility Simulator', icon: Sparkles },
           { id: 'fellowship', label: 'Fellowship Lifecycle (NFST)', icon: Award }
         ];

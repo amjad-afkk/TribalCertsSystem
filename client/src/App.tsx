@@ -12,6 +12,7 @@ import { DynamicApplicationForm } from './components/applicant/DynamicApplicatio
 import { RegionalChatbot } from './components/chatbot/RegionalChatbot';
 import { RoleGuard } from './components/common/RoleGuard';
 import { AuthModal, type AuthenticatedUser } from './components/auth/AuthModal';
+import { LandingLoginPage } from './components/auth/LandingLoginPage';
 import { NotificationModal } from './components/common/NotificationModal';
 import { FellowshipPortal } from './components/fellowship/FellowshipPortal';
 import { api, setApiRole } from './services/api';
@@ -62,26 +63,16 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 }
 
 export const App: React.FC = () => {
-  const [currentTab, setCurrentTab] = useState<string>('applicant');
-  const [currentRole, setCurrentRole] = useState<string>('applicant-pooja');
+  const [currentTab, setCurrentTab] = useState<string>('login');
+  const [currentRole, setCurrentRole] = useState<string>('guest');
   
-  // Government Authentication & SSO Session State
-  const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>({
-    id: 'app-user-01',
-    name: 'Pooja Maravi',
-    email: 'pooja.maravi@jnu.ac.in',
-    phone: '+91 98765 43210',
-    aadhaarMasked: 'XXXX-XXXX-4123',
-    role: 'APPLICANT',
-    category: 'PVTG',
-    isKycVerified: true,
-    designationTitle: 'Citizen / ST Ph.D Scholar'
-  });
+  // Government Authentication & SSO Session State (null by default for clean, secure entry gateway)
+  const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(null);
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalInitialTab, setAuthModalInitialTab] = useState<'citizen' | 'officer'>('citizen');
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState<boolean>(false);
-  const [unreadNotifsCount, setUnreadNotifsCount] = useState<number>(2);
+  const [unreadNotifsCount, setUnreadNotifsCount] = useState<number>(0);
 
   const [isApplyModalOpen, setIsApplyModalOpen] = useState<boolean>(false);
   const [defaultApplySchemeCode, setDefaultApplySchemeCode] = useState<string | undefined>(undefined);
@@ -108,7 +99,11 @@ export const App: React.FC = () => {
         console.error('Error fetching unread count:', e);
       }
     };
-    fetchUnread();
+    if (currentUser) {
+      fetchUnread();
+    } else {
+      setUnreadNotifsCount(0);
+    }
   }, [currentUser]);
 
   useEffect(() => {
@@ -131,12 +126,12 @@ export const App: React.FC = () => {
     setIsAuthModalOpen(true);
   };
 
-  // Sign out user session
+  // Sign out user session & return to clean landing login page
   const handleLogout = () => {
     setCurrentUser(null);
     setCurrentRole('guest');
     setApiRole('guest');
-    setCurrentTab('applicant');
+    setCurrentTab('login');
   };
 
   // Handle successful login
@@ -306,7 +301,16 @@ export const App: React.FC = () => {
       <ErrorBoundary>
         <main style={{ flex: 1, padding: '1.75rem 0' }}>
           <div className="container">
-            {currentTab === 'applicant' && (
+            {/* Public National Portal Entry & Login Gateway */}
+            {(!currentUser || currentTab === 'login') && (
+              <LandingLoginPage
+                onLoginSuccess={handleLoginSuccess}
+                onExploreSimulator={() => setCurrentTab('simulator')}
+              />
+            )}
+
+            {/* Authenticated Citizen Applicant Dashboard */}
+            {currentUser && currentTab === 'applicant' && (
               <ApplicantPortal
                 currentRole={currentRole}
                 onOpenApplyModal={() => {
