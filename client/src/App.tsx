@@ -136,6 +136,7 @@ export const App: React.FC = () => {
     setCurrentUser(null);
     setCurrentRole('guest');
     setApiRole('guest');
+    setCurrentTab('applicant');
   };
 
   // Handle successful login
@@ -152,6 +153,18 @@ export const App: React.FC = () => {
     const mapped = roleMap[user.role] || 'applicant-pooja';
     setCurrentRole(mapped);
     setApiRole(user.role);
+
+    // Direct user to their statutory workspace
+    if (user.role === 'INO' || user.role === 'STATE_NODAL') {
+      setCurrentTab('verification');
+    } else if (user.role === 'COMMITTEE') {
+      setCurrentTab('committee');
+    } else if (user.role === 'MOTA_ADMIN') {
+      setCurrentTab('analytics');
+    } else {
+      setCurrentTab('applicant');
+    }
+
     setIsAuthModalOpen(false);
   };
 
@@ -227,8 +240,18 @@ export const App: React.FC = () => {
     };
 
     if (userMap[personaId]) {
-      setCurrentUser(userMap[personaId]);
-      setApiRole(userMap[personaId].role);
+      const u = userMap[personaId];
+      setCurrentUser(u);
+      setApiRole(u.role);
+      if (u.role === 'INO' || u.role === 'STATE_NODAL') {
+        setCurrentTab('verification');
+      } else if (u.role === 'COMMITTEE') {
+        setCurrentTab('committee');
+      } else if (u.role === 'MOTA_ADMIN') {
+        setCurrentTab('analytics');
+      } else {
+        setCurrentTab('applicant');
+      }
     }
   };
 
