@@ -4,8 +4,9 @@ import type { ApplicationItem } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
 import {
   ShieldCheck, AlertTriangle, CheckCircle,
-  RefreshCw, Eye, X
+  RefreshCw, Eye, X, QrCode
 } from 'lucide-react';
+import { QrVerificationModal } from '../common/QrVerificationModal';
 
 interface VerificationQueueProps {
   currentRole: string;
@@ -16,6 +17,7 @@ export const VerificationQueue: React.FC<VerificationQueueProps> = ({ currentRol
   const [loading, setLoading] = useState(true);
   const [selectedApp, setSelectedApp] = useState<any | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [qrModalDoc, setQrModalDoc] = useState<any | null>(null);
 
   // Review modal state
   const [reviewAction, setReviewAction] = useState<'APPROVED' | 'FLAGGED_DEFICIENCY' | 'REJECTED' | null>(null);
@@ -291,7 +293,18 @@ export const VerificationQueue: React.FC<VerificationQueueProps> = ({ currentRol
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <strong style={{ color: '#0A2540' }}>{doc.docType}</strong>
-                          <StatusBadge status={doc.status} />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <button
+                              type="button"
+                              onClick={() => setQrModalDoc(doc)}
+                              className="btn btn-secondary btn-sm"
+                              style={{ fontSize: '0.6875rem', padding: '0.2rem 0.45rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                              title="Verify Cryptographic QR Code and PKI Signature"
+                            >
+                              <QrCode size={12} /> Verify QR
+                            </button>
+                            <StatusBadge status={doc.status} />
+                          </div>
                         </div>
                         <div style={{ color: '#718096', marginTop: '0.2rem' }}>
                           File: {doc.fileName}
@@ -385,6 +398,12 @@ export const VerificationQueue: React.FC<VerificationQueueProps> = ({ currentRol
           </div>
         )}
       </div>
+
+      <QrVerificationModal
+        isOpen={!!qrModalDoc}
+        onClose={() => setQrModalDoc(null)}
+        documentTitle={qrModalDoc?.fileName || qrModalDoc?.docType || 'Income & Caste Certificate'}
+      />
     </div>
   );
 };

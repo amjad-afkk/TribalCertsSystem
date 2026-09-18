@@ -12,32 +12,29 @@ import {
   ChevronDown,
   ExternalLink,
   GraduationCap,
-  Lock
+  Lock,
+  Bell,
+  Award
 } from 'lucide-react';
-
-const ROLE_DISPLAY_TAG: Record<string, { label: string; bg: string; color: string; border: string }> = {
-  'applicant-pooja': { label: 'Citizen (PVTG)', bg: '#EBF3FC', color: '#1A4D8F', border: '#BCD4F0' },
-  'applicant-amitabh': { label: 'Citizen (ST)', bg: '#FEF3C7', color: '#92400E', border: '#FDE68A' },
-  'applicant-sunita': { label: 'Citizen (NOS)', bg: '#E0E7FF', color: '#3730A3', border: '#C7D2FE' },
-  'ino-officer': { label: 'Tier-1 INO', bg: '#CCFBF1', color: '#0F766E', border: '#99F6E4' },
-  'state-nodal': { label: 'Tier-2 SNO', bg: '#FFEDD5', color: '#9A3412', border: '#FED7AA' },
-  'committee-member': { label: 'Selection Comm.', bg: '#F3E8FF', color: '#6B21A8', border: '#E9D5FF' },
-  'mota-admin': { label: 'Super Admin', bg: '#FEF9C3', color: '#854D0E', border: '#FEF08A' }
-};
 
 interface GovHeaderProps {
   currentTab: string;
   setCurrentTab: (tab: string) => void;
-  currentRole: string;
-  setCurrentRole: (role: string) => void;
+  currentUser: any | null;
+  onOpenLogin: (initialTab?: 'citizen' | 'officer') => void;
+  onLogout: () => void;
+  onOpenNotifications: () => void;
+  unreadNotifsCount?: number;
 }
-
 
 export const GovHeader: React.FC<GovHeaderProps> = ({
   currentTab,
   setCurrentTab,
-  currentRole,
-  setCurrentRole
+  currentUser,
+  onOpenLogin,
+  onLogout,
+  onOpenNotifications,
+  unreadNotifsCount = 0
 }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
@@ -74,7 +71,8 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
 
   const studentTabs = [
     { id: 'applicant', label: 'Applicant Dashboard', icon: UserCheck, desc: 'Track submitted applications, documents, & DBT' },
-    { id: 'simulator', label: 'Scholarship Twin (Simulator)', icon: Sparkles, desc: 'Rule-based multi-scheme eligibility check' }
+    { id: 'simulator', label: 'Scholarship Twin (Simulator)', icon: Sparkles, desc: 'Rule-based multi-scheme eligibility check' },
+    { id: 'fellowship', label: 'Fellowship Lifecycle (NFST/NOS)', icon: Award, desc: '30-day joining, continuation reports, & thesis repository' }
   ];
 
   const scrutinyTabs = [
@@ -156,65 +154,136 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
           </div>
         </div>
 
-        {/* Role Switcher with RBAC Clearance Badge */}
+        {/* Authentication & User Session Management (Replaces dropdown) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {ROLE_DISPLAY_TAG[currentRole] && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '0.6875rem', color: '#718096', fontWeight: 600, textTransform: 'uppercase' }}>
-                Clearance
-              </span>
-              <span
+          {!currentUser ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={() => onOpenLogin('citizen')}
+                className="btn btn-primary"
                 style={{
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  backgroundColor: ROLE_DISPLAY_TAG[currentRole].bg,
-                  color: ROLE_DISPLAY_TAG[currentRole].color,
-                  border: `1px solid ${ROLE_DISPLAY_TAG[currentRole].border}`,
-                  padding: '0.35rem 0.65rem',
-                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  padding: '0.5rem 1rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+                }}
+              >
+                <Lock size={15} />
+                <span>Sign In / Register</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onOpenLogin('officer')}
+                className="btn btn-secondary"
+                style={{
+                  fontSize: '0.8125rem',
+                  padding: '0.5rem 0.85rem',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.35rem'
                 }}
               >
-                {currentRole.startsWith('applicant-') ? <UserCheck size={13} /> : <ShieldCheck size={13} />}
-                {ROLE_DISPLAY_TAG[currentRole].label}
-              </span>
+                <ShieldCheck size={14} />
+                <span>Officer SSO</span>
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              {/* Notification Bell with Badge */}
+              <button
+                type="button"
+                onClick={onOpenNotifications}
+                className="btn btn-secondary btn-sm"
+                style={{ position: 'relative', padding: '0.45rem', borderRadius: '50%' }}
+                title="View SMS & WhatsApp Alerts"
+              >
+                <Bell size={16} style={{ color: '#1A4D8F' }} />
+                {(unreadNotifsCount ?? 0) > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-3px',
+                    right: '-3px',
+                    backgroundColor: '#E06D14',
+                    color: '#FFFFFF',
+                    borderRadius: '50%',
+                    width: '16px',
+                    height: '16px',
+                    fontSize: '0.625rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    {unreadNotifsCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Logged in Identity Card */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.6rem',
+                backgroundColor: '#F8FAFC',
+                padding: '0.35rem 0.75rem',
+                borderRadius: '6px',
+                border: '1px solid #CBD5E1'
+              }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  backgroundColor: '#EBF3FC',
+                  color: '#1A4D8F',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: '0.8125rem'
+                }}>
+                  {currentUser.name ? currentUser.name.slice(0, 2).toUpperCase() : 'GO'}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0A2540', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <span>{currentUser.name}</span>
+                    <span style={{
+                      fontSize: '0.625rem',
+                      fontWeight: 700,
+                      backgroundColor: '#DCFCE7',
+                      color: '#166534',
+                      padding: '0.1rem 0.35rem',
+                      borderRadius: '3px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '2px'
+                    }}>
+                      <CheckCircle2 size={9} /> e-KYC
+                    </span>
+                  </div>
+
+                  <span style={{ fontSize: '0.6875rem', color: '#64748B' }}>
+                    {currentUser.designationTitle || (currentUser.role === 'APPLICANT' ? 'Citizen (Aadhaar Verified)' : currentUser.role)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Sign Out Button */}
+              <button
+                type="button"
+                onClick={onLogout}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.75rem', padding: '0.4rem 0.65rem', color: '#A61C1C' }}
+                title="Sign Out of Session"
+              >
+                Sign Out
+              </button>
             </div>
           )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <span style={{ fontSize: '0.6875rem', color: '#718096', fontWeight: 600, textTransform: 'uppercase' }}>
-              Active Persona / Role
-            </span>
-            <select
-              className="form-select"
-              style={{
-                fontSize: '0.8125rem',
-                padding: '0.4rem 0.65rem',
-                fontWeight: 600,
-                borderColor: '#CBD5E1',
-                backgroundColor: '#F8FAFC',
-                borderRadius: '6px',
-                color: '#0A2540',
-                cursor: 'pointer'
-              }}
-              value={currentRole}
-              onChange={(e) => setCurrentRole(e.target.value)}
-            >
-              <optgroup label="Citizen / Applicant Personas">
-                <option value="applicant-pooja">Pooja Maravi (PVTG • Ph.D NFST)</option>
-                <option value="applicant-amitabh">Amitabh Gond (Deficiency Demo • Income Cap)</option>
-                <option value="applicant-sunita">Sunita Soren (NOS • Oxford QS #3)</option>
-              </optgroup>
-              <optgroup label="Government Officers & Scrutiny">
-                <option value="ino-officer">Institute Nodal Officer (INO - Tier 1)</option>
-                <option value="state-nodal">State Nodal Officer (SNO - Tier 2)</option>
-                <option value="committee-member">National Selection Committee (Sign-off)</option>
-                <option value="mota-admin">MoTA Super Administrator</option>
-              </optgroup>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -285,7 +354,7 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
               >
                 <ShieldCheck size={15} />
                 <span>Scrutiny & Selection</span>
-                {currentRole.startsWith('applicant-') && (
+                {(!currentUser || currentUser.role === 'APPLICANT') && (
                   <Lock size={11} style={{ opacity: 0.75, marginLeft: '0.15rem' }} />
                 )}
                 <ChevronDown size={14} style={{ transform: openDropdown === 'scrutiny' ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
@@ -296,7 +365,7 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
                   {scrutinyTabs.map(t => {
                     const Icon = t.icon;
                     const isActive = currentTab === t.id;
-                    const isRestrictedForApplicant = currentRole.startsWith('applicant-') && t.id !== 'waterfall';
+                    const isRestrictedForApplicant = (!currentUser || currentUser.role === 'APPLICANT') && t.id !== 'waterfall';
                     return (
                       <button
                         key={t.id}
@@ -330,7 +399,7 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
               >
                 <BarChart3 size={15} />
                 <span>Ministry Governance</span>
-                {currentRole.startsWith('applicant-') && (
+                {(!currentUser || currentUser.role === 'APPLICANT') && (
                   <Lock size={11} style={{ opacity: 0.75, marginLeft: '0.15rem' }} />
                 )}
                 <ChevronDown size={14} style={{ transform: openDropdown === 'admin' ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
@@ -341,7 +410,7 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
                   {adminTabs.map(t => {
                     const Icon = t.icon;
                     const isActive = currentTab === t.id;
-                    const isRestricted = currentRole.startsWith('applicant-');
+                    const isRestricted = !currentUser || currentUser.role === 'APPLICANT';
                     return (
                       <button
                         key={t.id}

@@ -463,12 +463,211 @@ export function runSeed(db = getDb()) {
     );
   }
 
-  console.log('Database seeded with 5 Schemes, QS Universities, 5 Applicants, 5 Applications, and Demo Documents.');
+  // 6. Seed Post-Selection Fellowship Records (FR-7.1 to FR-7.5)
+  const insertFellowship = db.prepare(`
+    INSERT OR REPLACE INTO fellowship_records (
+      id, applicant_id, scheme_id, application_id, award_date, joining_deadline,
+      joining_status, supervisor_name, joining_report_url, current_quarter,
+      thesis_status, thesis_title, thesis_archive_id, final_disbursement_unlocked
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  // Pooja Maravi: Shortlisted/Awarded NFST Fellowship
+  // Award Date: 12 days ago, statutory 30-day joining window gives 18 days remaining
+  const now = new Date();
+  const awardDate = new Date(now.getTime() - 12 * 24 * 60 * 60 * 1000).toISOString();
+  const joiningDeadline = new Date(now.getTime() + 18 * 24 * 60 * 60 * 1000).toISOString();
+
+  insertFellowship.run(
+    'flw-nfst-pooja-01',
+    'app-user-01',
+    'scheme-nfst',
+    'appln-nfst-01',
+    awardDate,
+    joiningDeadline,
+    'CONFIRMED',
+    'Prof. Ananya Sen, School of Social Sciences, JNU',
+    '/uploads/pooja_jnu_joining_report.pdf',
+    4, // Year 1, Quarter 4 (awaiting thesis synopsis to unlock final disbursement)
+    'NOT_SUBMITTED',
+    'Ethnobotany and Indigenous Healing Systems of the Baiga Community',
+    null,
+    0
+  );
+
+  // 7. Seed Continuation Reports (FR-7.2)
+  const insertContinuation = db.prepare(`
+    INSERT OR REPLACE INTO continuation_reports (
+      id, fellowship_id, quarter_number, academic_year, attendance_percentage,
+      progress_summary, stipend_amount, pfms_transaction_id, status, submitted_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  insertContinuation.run(
+    'cont-pooja-q1',
+    'flw-nfst-pooja-01',
+    1,
+    '2025-2026',
+    94.5,
+    'Literature review on central Indian tribal herbal pharmacopoeia finalized and approved by Guide.',
+    93000, // ₹31,000 * 3 months
+    'PFMS-DBT-2025-991204',
+    'DISBURSED',
+    '2025-11-15T10:00:00.000Z'
+  );
+
+  insertContinuation.run(
+    'cont-pooja-q2',
+    'flw-nfst-pooja-01',
+    2,
+    '2025-2026',
+    96.0,
+    'Extensive ethnographic fieldwork completed across 14 Baiga settlements in Dindori and Mandla districts.',
+    93000,
+    'PFMS-DBT-2026-118402',
+    'DISBURSED',
+    '2026-02-20T11:30:00.000Z'
+  );
+
+  insertContinuation.run(
+    'cont-pooja-q3',
+    'flw-nfst-pooja-01',
+    3,
+    '2026-2027',
+    92.0,
+    'Taxonomic documentation of 82 rare medicinal plant species and preparation of herbarium specimens.',
+    93000,
+    'PFMS-DBT-2026-302911',
+    'DISBURSED',
+    '2026-06-10T09:15:00.000Z'
+  );
+
+  // 8. Seed DigiLocker Pre-verified Documents (FR-1.2)
+  const insertDigiLocker = db.prepare(`
+    INSERT OR REPLACE INTO digilocker_documents (
+      id, applicant_id, doc_type, title, issuer, doc_uri, issue_date, verified_data
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  insertDigiLocker.run(
+    'dgl-pooja-caste',
+    'app-user-01',
+    'CASTE_CERT',
+    'Scheduled Tribe Certificate (PVTG - Baiga)',
+    'Sub-Divisional Officer (Civil), Revenue Division, Dindori, MP',
+    'in.gov.mp.edistrict:caste:ST-2022-DND-4011',
+    '2022-06-18',
+    JSON.stringify({
+      candidateName: 'Pooja Maravi',
+      fatherName: 'Late Sh. Ramu Maravi',
+      tribeName: 'Baiga (Particularly Vulnerable Tribal Group)',
+      state: 'Madhya Pradesh',
+      district: 'Dindori',
+      digitalSignatureStatus: 'CRYPTOGRAPHICALLY_VERIFIED',
+      signingAuthority: 'SDO Civil Dindori Digital Key 0x9AF2'
+    })
+  );
+
+  insertDigiLocker.run(
+    'dgl-pooja-income',
+    'app-user-01',
+    'INCOME_CERT',
+    'Annual Family Income Certificate (AY 2026-27)',
+    'Office of the Tehsildar & Executive Magistrate, Dindori, MP',
+    'in.gov.mp.edistrict:income:INC-2026-88192',
+    '2026-04-15',
+    JSON.stringify({
+      candidateName: 'Pooja Maravi',
+      annualIncome: 140000,
+      incomeInWords: 'One Lakh Forty Thousand Only',
+      financialYear: '2025-2026',
+      validUntil: '2027-03-31',
+      digitalSignatureStatus: 'CRYPTOGRAPHICALLY_VERIFIED',
+      signingAuthority: 'Tehsildar Dindori Public Seal'
+    })
+  );
+
+  insertDigiLocker.run(
+    'dgl-amitabh-caste',
+    'app-user-05',
+    'CASTE_CERT',
+    'Scheduled Tribe Certificate (Gond Community)',
+    'Sub-Divisional Magistrate, Bastar, Chhattisgarh',
+    'in.gov.cg.edistrict:caste:ST-2021-BST-1109',
+    '2021-08-12',
+    JSON.stringify({
+      candidateName: 'Amitabh Gond',
+      tribeName: 'Gond',
+      state: 'Chhattisgarh',
+      district: 'Bastar',
+      digitalSignatureStatus: 'CRYPTOGRAPHICALLY_VERIFIED'
+    })
+  );
+
+  insertDigiLocker.run(
+    'dgl-sunita-caste',
+    'app-user-03',
+    'CASTE_CERT',
+    'Scheduled Tribe Certificate (Santhal Community)',
+    'Revenue Officer, Mayurbhanj, Odisha',
+    'in.gov.odisha.edistrict:caste:ST-2020-MBJ-7718',
+    '2020-03-10',
+    JSON.stringify({
+      candidateName: 'Sunita Soren',
+      tribeName: 'Santhal',
+      state: 'Odisha',
+      district: 'Mayurbhanj',
+      digitalSignatureStatus: 'CRYPTOGRAPHICALLY_VERIFIED'
+    })
+  );
+
+  // 9. Seed Notifications (SMS Alerts & WhatsApp Nudges - FR-4.6, FR-6.2, §6.8)
+  const insertNotification = db.prepare(`
+    INSERT OR REPLACE INTO notifications (
+      id, recipient_id, channel, title, message, action_url, is_read, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  insertNotification.run(
+    'notif-pooja-01',
+    'app-user-01',
+    'SMS',
+    'Selection Committee Shortlist Confirmation',
+    'MoTA Alert: Congratulations Pooja Maravi! Your NFST Fellowship application (ARG45) has been shortlisted under PVTG priority. Final sign-off scheduled.',
+    '/applicant',
+    0,
+    new Date(Date.now() - 3600000 * 2).toISOString()
+  );
+
+  insertNotification.run(
+    'notif-pooja-02',
+    'app-user-01',
+    'WHATSAPP',
+    'Quarterly Fellowship Continuation Alert',
+    'Namaste Pooja Ji! Your Q3 fellowship stipend (₹93,000) was credited via PFMS-DBT. Next step: Upload your Ph.D. thesis summary to repository.tribal.gov.in to release Q4 grant.',
+    '/fellowship',
+    0,
+    new Date(Date.now() - 3600000 * 5).toISOString()
+  );
+
+  insertNotification.run(
+    'notif-amitabh-01',
+    'app-user-05',
+    'WHATSAPP',
+    'Immediate Action: Income Discrepancy Flagged',
+    'Urgent MoTA Alert: Amitabh Gond, your Income Certificate shows ₹2,80,000, exceeding the Post-Matric ₹2.5L statutory cap. Please submit your clarification before 30th Sept to prevent rejection.',
+    '/applicant',
+    0,
+    new Date(Date.now() - 3600000 * 8).toISOString()
+  );
+
+  console.log('Database seeded with 5 Schemes, QS Universities, 5 Applicants, 5 Applications, Fellowship Records, DigiLocker Docs, and Notifications.');
 }
 
 // Auto-run if executed directly
 if (process.argv[1]?.endsWith('seed.ts')) {
   runSeed();
 }
+
 
 

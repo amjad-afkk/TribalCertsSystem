@@ -4,8 +4,10 @@ import type { UserRole } from '../../types';
 
 interface RoleGuardProps {
   allowedRoles: UserRole[];
-  currentRole: string;
-  onSwitchPersona: (personaId: string) => void;
+  currentRole?: string;
+  currentUser?: any | null;
+  onOpenLogin?: () => void;
+  onSwitchPersona?: (personaId: string) => void;
   children: React.ReactNode;
   featureName: string;
   requiredClearanceLabel: string;
@@ -35,7 +37,9 @@ const PERSONA_LABELS: Record<string, { name: string; title: string }> = {
 
 export const RoleGuard: React.FC<RoleGuardProps> = ({
   allowedRoles,
-  currentRole,
+  currentRole = 'applicant-pooja',
+  currentUser,
+  onOpenLogin,
   onSwitchPersona,
   children,
   featureName,
@@ -43,18 +47,53 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   suggestedPersonaId = 'mota-admin',
   suggestedPersonaName = 'MoTA Super Administrator'
 }) => {
-  const userRole = ROLE_MAP[currentRole] || 'APPLICANT';
+  // If currentUser is provided, use its role; otherwise fall back to currentRole
+  const effectiveRole = currentUser ? currentUser.role : (ROLE_MAP[currentRole] || 'APPLICANT');
 
   // MoTA_ADMIN has super-admin override across all modules
-  const isAuthorized = userRole === 'MOTA_ADMIN' || allowedRoles.includes(userRole);
+  const isAuthorized = effectiveRole === 'MOTA_ADMIN' || allowedRoles.includes(effectiveRole as UserRole);
 
   if (isAuthorized) {
     return <>{children}</>;
   }
 
+  // If user is completely logged out (guest)
+  if (!currentUser && onOpenLogin) {
+    return (
+      <div style={{ maxWidth: '720px', margin: '3rem auto', width: '100%' }}>
+        <div className="gov-card" style={{ borderTop: '5px solid #1A4D8F', textAlign: 'center', padding: '2.5rem' }}>
+          <div style={{
+            width: '54px', height: '54px', borderRadius: '50%', backgroundColor: '#EBF3FC',
+            color: '#1A4D8F', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 1rem'
+          }}>
+            <Lock size={26} />
+          </div>
+
+          <h3 style={{ fontSize: '1.25rem', color: '#0A2540', marginBottom: '0.5rem' }}>
+            Government Clearance Authentication Required
+          </h3>
+          <p style={{ color: '#4A5568', fontSize: '0.875rem', maxWidth: '500px', margin: '0 auto 1.5rem', lineHeight: 1.5 }}>
+            Access to <strong>{featureName}</strong> requires authorized credentials ({requiredClearanceLabel}). Please sign in via the Ministry of Tribal Affairs Single Sign-On portal.
+          </p>
+
+          <button
+            type="button"
+            onClick={onOpenLogin}
+            className="btn btn-primary"
+            style={{ padding: '0.65rem 1.25rem', fontSize: '0.9375rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <ShieldAlert size={16} />
+            <span>Sign In to Access Worklist</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const currentPersonaInfo = PERSONA_LABELS[currentRole] || {
     name: currentRole,
-    title: userRole
+    title: effectiveRole
   };
 
   return (
@@ -157,7 +196,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
                 borderRadius: '4px'
               }}
             >
-              Role: {userRole} (Insufficient Clearance)
+              Role: {effectiveRole} (Insufficient Clearance)
             </span>
           </div>
 
@@ -196,18 +235,20 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={() => onSwitchPersona(suggestedPersonaId)}
-              className="btn btn-primary"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-            >
-              <UserCheck size={16} />
-              <span>Switch to {suggestedPersonaName}</span>
-              <ArrowRight size={14} />
-            </button>
+            {onSwitchPersona && (
+              <button
+                type="button"
+                onClick={() => onSwitchPersona(suggestedPersonaId)}
+                className="btn btn-primary"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <UserCheck size={16} />
+                <span>Switch to {suggestedPersonaName}</span>
+                <ArrowRight size={14} />
+              </button>
+            )}
 
-            {suggestedPersonaId !== 'mota-admin' && (
+            {onSwitchPersona && suggestedPersonaId !== 'mota-admin' && (
               <button
                 type="button"
                 onClick={() => onSwitchPersona('mota-admin')}

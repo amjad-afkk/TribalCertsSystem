@@ -16,6 +16,15 @@ import {
   signOffSelection
 } from '../controllers/selectionController.js';
 import { getMoTaAnalytics } from '../controllers/analyticsController.js';
+import { sendOtp, verifyOtp, officerLogin } from '../controllers/authController.js';
+import {
+  getFellowshipRecord,
+  submitJoiningReport,
+  submitContinuationReport,
+  submitThesis
+} from '../controllers/fellowshipController.js';
+import { getDigiLockerDocuments, verifyCertificateQr } from '../controllers/digilockerController.js';
+import { getNotifications, markNotificationRead, sendTestNudge } from '../controllers/notificationController.js';
 import { getDb } from '../db/connection.js';
 import { extractRole, requireRoles } from '../middleware/auth.js';
 
@@ -23,6 +32,28 @@ const router = Router();
 
 // Global role extraction & normalization for all incoming requests
 router.use(extractRole);
+
+// Authentication & Identity (Citizen Aadhaar OTP + Officer SSO)
+router.post('/auth/send-otp', sendOtp);
+router.post('/auth/verify-otp', verifyOtp);
+router.post('/auth/officer-login', officerLogin);
+
+// Post-Selection Fellowship Lifecycle (FR-7.1 to FR-7.5)
+router.get('/fellowship/:applicantId', getFellowshipRecord);
+router.post('/fellowship/joining', submitJoiningReport);
+router.post('/fellowship/continuation', submitContinuationReport);
+router.post('/fellowship/thesis', submitThesis);
+
+// DigiLocker Integration & QR Verification (FR-1.2, Section 5.4)
+router.get('/digilocker/documents', getDigiLockerDocuments);
+router.get('/digilocker/documents/:applicantId', getDigiLockerDocuments);
+router.post('/digilocker/verify-qr', verifyCertificateQr);
+
+// Multi-Channel Notifications (FR-4.6, §6.8)
+router.get('/notifications', getNotifications);
+router.get('/notifications/:recipientId', getNotifications);
+router.patch('/notifications/:id/read', markNotificationRead);
+router.post('/notifications/test-nudge', sendTestNudge);
 
 // Schemes (Public discovery; Policy onboarding restricted to Super Admin)
 router.get('/schemes', getAllSchemes);

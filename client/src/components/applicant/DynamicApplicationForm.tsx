@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import type { Scheme, Applicant } from '../../types';
-import { X, CheckCircle, Sparkles, Send, ShieldAlert } from 'lucide-react';
+import { X, CheckCircle, Sparkles, Send, ShieldAlert, DownloadCloud } from 'lucide-react';
+import { DigiLockerModal } from './DigiLockerModal';
 
 interface DynamicApplicationFormProps {
   onClose: () => void;
@@ -31,6 +32,25 @@ export const DynamicApplicationForm: React.FC<DynamicApplicationFormProps> = ({
   const [ocrResult, setOcrResult] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isDigiLockerOpen, setIsDigiLockerOpen] = useState(false);
+
+  const handleImportDigiLockerDoc = (doc: {
+    docType: string;
+    fileName: string;
+    extractedData: any;
+    docUri: string;
+  }) => {
+    setUploadedDocs(prev => [
+      ...prev.filter(d => d.docType !== doc.docType),
+      {
+        docType: doc.docType,
+        fileName: doc.fileName,
+        status: 'DIGILOCKER_VERIFIED',
+        extracted: doc.extractedData,
+        discrepancyNote: null
+      }
+    ]);
+  };
 
   useEffect(() => {
     const fetchSchemes = async () => {
@@ -279,15 +299,39 @@ export const DynamicApplicationForm: React.FC<DynamicApplicationFormProps> = ({
             </div>
           )}
 
-          {/* Scheme Document Checklist with Instant AI OCR */}
+          {/* Scheme Document Checklist with Instant AI OCR & DigiLocker */}
           <div style={{ marginBottom: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <label className="form-label" style={{ margin: 0 }}>
-                Required Document Verification (AI OCR Supported)
-              </label>
-              <span style={{ fontSize: '0.6875rem', color: '#1A4D8F', fontWeight: 600 }}>
-                Gemini Multimodal OCR Active
-              </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div>
+                <label className="form-label" style={{ margin: 0 }}>
+                  Required Document Verification (DigiLocker & AI OCR)
+                </label>
+                <div style={{ fontSize: '0.6875rem', color: '#718096' }}>
+                  Fetch tamper-proof credentials directly from DigiLocker or scan with AI OCR
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsDigiLockerOpen(true)}
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    backgroundColor: '#0F2A4A',
+                    color: '#FFFFFF',
+                    fontSize: '0.75rem',
+                    padding: '0.35rem 0.65rem'
+                  }}
+                >
+                  <DownloadCloud size={13} />
+                  Fetch from DigiLocker
+                </button>
+                <span style={{ fontSize: '0.6875rem', color: '#1A4D8F', fontWeight: 600 }}>
+                  Gemini OCR Active
+                </span>
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -308,14 +352,14 @@ export const DynamicApplicationForm: React.FC<DynamicApplicationFormProps> = ({
                         {doc.title} {doc.required && <span style={{ color: '#C82333' }}>*</span>}
                       </div>
                       <div style={{ fontSize: '0.6875rem', color: '#718096' }}>
-                        Type: {doc.docType} {uploaded && `• Uploaded: ${uploaded.fileName}`}
+                        Type: {doc.docType} {uploaded && `• Source: ${uploaded.status === 'DIGILOCKER_VERIFIED' ? 'DigiLocker Digital Locker' : uploaded.fileName}`}
                       </div>
                     </div>
 
                     <div>
                       {uploaded ? (
-                        <span className="badge badge-approved" style={{ fontSize: '0.6875rem' }}>
-                          <CheckCircle size={12} /> Verified
+                        <span className="badge badge-approved" style={{ fontSize: '0.6875rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <CheckCircle size={12} /> {uploaded.status === 'DIGILOCKER_VERIFIED' ? 'DigiLocker Verified' : 'AI Verified'}
                         </span>
                       ) : (
                         <button
@@ -368,6 +412,13 @@ export const DynamicApplicationForm: React.FC<DynamicApplicationFormProps> = ({
             </button>
           </div>
         </form>
+
+        <DigiLockerModal
+          isOpen={isDigiLockerOpen}
+          onClose={() => setIsDigiLockerOpen(false)}
+          applicantId={applicant.id}
+          onImportDocument={handleImportDigiLockerDoc}
+        />
       </div>
     </div>
   );

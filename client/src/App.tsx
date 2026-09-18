@@ -11,6 +11,9 @@ import { SchemeConfigurator } from './components/admin/SchemeConfigurator';
 import { DynamicApplicationForm } from './components/applicant/DynamicApplicationForm';
 import { RegionalChatbot } from './components/chatbot/RegionalChatbot';
 import { RoleGuard } from './components/common/RoleGuard';
+import { AuthModal, type AuthenticatedUser } from './components/auth/AuthModal';
+import { NotificationModal } from './components/common/NotificationModal';
+import { FellowshipPortal } from './components/fellowship/FellowshipPortal';
 import { api, setApiRole } from './services/api';
 import type { Applicant } from './types';
 
@@ -61,14 +64,52 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<string>('applicant');
   const [currentRole, setCurrentRole] = useState<string>('applicant-pooja');
+  
+  // Government Authentication & SSO Session State
+  const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>({
+    id: 'app-user-01',
+    name: 'Pooja Maravi',
+    email: 'pooja.maravi@jnu.ac.in',
+    phone: '+91 98765 43210',
+    aadhaarMasked: 'XXXX-XXXX-4123',
+    role: 'APPLICANT',
+    category: 'PVTG',
+    isKycVerified: true,
+    designationTitle: 'Citizen / ST Ph.D Scholar'
+  });
+
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [authModalInitialTab, setAuthModalInitialTab] = useState<'citizen' | 'officer'>('citizen');
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState<boolean>(false);
+  const [unreadNotifsCount, setUnreadNotifsCount] = useState<number>(2);
+
   const [isApplyModalOpen, setIsApplyModalOpen] = useState<boolean>(false);
   const [defaultApplySchemeCode, setDefaultApplySchemeCode] = useState<string | undefined>(undefined);
   const [applicants, setApplicants] = useState<Applicant[]>([]);
 
   // Synchronize active role with API client for RBAC headers
   useEffect(() => {
-    setApiRole(currentRole);
-  }, [currentRole]);
+    if (currentUser) {
+      setApiRole(currentUser.role);
+    } else {
+      setApiRole('guest');
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const resp = await api.getNotifications(currentUser?.id || 'app-user-01');
+        if (resp.success && Array.isArray(resp.data)) {
+          const unread = resp.data.filter((n: any) => !n.isRead).length;
+          setUnreadNotifsCount(unread);
+        }
+      } catch (e) {
+        console.error('Error fetching unread count:', e);
+      }
+    };
+    fetchUnread();
+  }, [currentUser]);
 
   useEffect(() => {
     const fetchApplicants = async () => {
@@ -84,8 +125,116 @@ export const App: React.FC = () => {
     fetchApplicants();
   }, []);
 
-  // Determine active applicant based on current persona
+  // Open Auth Modal
+  const handleOpenLogin = (initialTab?: 'citizen' | 'officer') => {
+    setAuthModalInitialTab(initialTab || 'citizen');
+    setIsAuthModalOpen(true);
+  };
+
+  // Sign out user session
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setCurrentRole('guest');
+    setApiRole('guest');
+  };
+
+  // Handle successful login
+  const handleLoginSuccess = (user: AuthenticatedUser) => {
+    setCurrentUser(user);
+    const roleMap: Record<string, string> = {
+      'APPLICANT': user.id === 'app-user-05' ? 'applicant-amitabh' :
+                   user.id === 'app-user-03' ? 'applicant-sunita' : 'applicant-pooja',
+      'INO': 'ino-officer',
+      'STATE_NODAL': 'state-nodal',
+      'COMMITTEE': 'committee-member',
+      'MOTA_ADMIN': 'mota-admin'
+    };
+    const mapped = roleMap[user.role] || 'applicant-pooja';
+    setCurrentRole(mapped);
+    setApiRole(user.role);
+    setIsAuthModalOpen(false);
+  };
+
+  // Switch persona fallback helper for RoleGuard simulation links
+  const handleSwitchPersona = (personaId: string) => {
+    setCurrentRole(personaId);
+    const userMap: Record<string, AuthenticatedUser> = {
+      'applicant-pooja': {
+        id: 'app-user-01',
+        name: 'Pooja Maravi',
+        email: 'pooja.maravi@jnu.ac.in',
+        phone: '+91 98765 43210',
+        aadhaarMasked: 'XXXX-XXXX-4123',
+        role: 'APPLICANT',
+        category: 'PVTG',
+        isKycVerified: true,
+        designationTitle: 'Citizen / ST Ph.D Scholar'
+      },
+      'applicant-amitabh': {
+        id: 'app-user-05',
+        name: 'Amitabh Gond',
+        email: 'amitabh.gond@nitrr.ac.in',
+        phone: '+91 98765 43214',
+        aadhaarMasked: 'XXXX-XXXX-9901',
+        role: 'APPLICANT',
+        category: 'ST_OTHER',
+        isKycVerified: true,
+        designationTitle: 'Citizen / B.Tech Scholar'
+      },
+      'applicant-sunita': {
+        id: 'app-user-03',
+        name: 'Sunita Soren',
+        email: 'sunita.soren@oxford.ac.uk',
+        phone: '+91 98765 43212',
+        aadhaarMasked: 'XXXX-XXXX-6789',
+        role: 'APPLICANT',
+        category: 'FEMALE_ST',
+        isKycVerified: true,
+        designationTitle: 'Citizen / NOS Overseas Scholar'
+      },
+      'ino-officer': {
+        id: 'OFFICER-INO',
+        name: 'Dr. Ramesh Chandra',
+        email: 'ino@jnu.ac.in',
+        role: 'INO',
+        isKycVerified: true,
+        designationTitle: 'Institute Nodal Officer (Tier 1 Scrutiny)'
+      },
+      'state-nodal': {
+        id: 'OFFICER-STATE-NODAL',
+        name: 'Dr. Sunita Barik',
+        email: 'sno.tribal@mp.gov.in',
+        role: 'STATE_NODAL',
+        isKycVerified: true,
+        designationTitle: 'State Nodal Officer (Tier 2 Scrutiny)'
+      },
+      'committee-member': {
+        id: 'OFFICER-COMMITTEE',
+        name: 'Prof. S. R. Marandi',
+        email: 'selection.committee@tribal.gov.in',
+        role: 'COMMITTEE',
+        isKycVerified: true,
+        designationTitle: 'National Selection Committee Chair'
+      },
+      'mota-admin': {
+        id: 'OFFICER-MOTA-ADMIN',
+        name: 'Shri A. K. Verma',
+        email: 'admin.tribal@gov.in',
+        role: 'MOTA_ADMIN',
+        isKycVerified: true,
+        designationTitle: 'MoTA Super Administrator'
+      }
+    };
+
+    if (userMap[personaId]) {
+      setCurrentUser(userMap[personaId]);
+      setApiRole(userMap[personaId].role);
+    }
+  };
+
+  // Determine active applicant based on current persona or current user
   const activeApplicantId =
+    currentUser?.id?.startsWith('app-user-') ? currentUser.id :
     currentRole === 'applicant-amitabh' ? 'app-user-05' :
     currentRole === 'applicant-sunita' ? 'app-user-03' : 'app-user-01';
 
@@ -123,8 +272,11 @@ export const App: React.FC = () => {
       <GovHeader
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
-        currentRole={currentRole}
-        setCurrentRole={setCurrentRole}
+        currentUser={currentUser}
+        onOpenLogin={handleOpenLogin}
+        onLogout={handleLogout}
+        onOpenNotifications={() => setIsNotificationModalOpen(true)}
+        unreadNotifsCount={unreadNotifsCount}
       />
 
       {/* Main Content Area */}
@@ -141,6 +293,10 @@ export const App: React.FC = () => {
               />
             )}
 
+            {currentTab === 'fellowship' && (
+              <FellowshipPortal applicantId={activeApplicantId} />
+            )}
+
             {currentTab === 'simulator' && (
               <ScholarshipTwin onSelectSchemeToApply={handleApplyFromSimulator} />
             )}
@@ -153,7 +309,9 @@ export const App: React.FC = () => {
               <RoleGuard
                 allowedRoles={['INO', 'STATE_NODAL', 'MOTA_ADMIN']}
                 currentRole={currentRole}
-                onSwitchPersona={setCurrentRole}
+                currentUser={currentUser}
+                onOpenLogin={() => handleOpenLogin('officer')}
+                onSwitchPersona={handleSwitchPersona}
                 featureName="Multi-Tier Nodal Scrutiny & Verification Queue"
                 requiredClearanceLabel="Institute Nodal Officer (INO) or State Nodal Officer (SNO)"
                 suggestedPersonaId="ino-officer"
@@ -167,7 +325,9 @@ export const App: React.FC = () => {
               <RoleGuard
                 allowedRoles={['COMMITTEE', 'MOTA_ADMIN']}
                 currentRole={currentRole}
-                onSwitchPersona={setCurrentRole}
+                currentUser={currentUser}
+                onOpenLogin={() => handleOpenLogin('officer')}
+                onSwitchPersona={handleSwitchPersona}
                 featureName="National Selection Committee Sign-Off Portal"
                 requiredClearanceLabel="National Selection Committee Member / Chair"
                 suggestedPersonaId="committee-member"
@@ -181,7 +341,9 @@ export const App: React.FC = () => {
               <RoleGuard
                 allowedRoles={['INO', 'STATE_NODAL', 'COMMITTEE', 'MOTA_ADMIN']}
                 currentRole={currentRole}
-                onSwitchPersona={setCurrentRole}
+                currentUser={currentUser}
+                onOpenLogin={() => handleOpenLogin('officer')}
+                onSwitchPersona={handleSwitchPersona}
                 featureName="MoTA National Operations & Deficiency Radar"
                 requiredClearanceLabel="Nodal Officer or Ministry Administrator"
                 suggestedPersonaId="mota-admin"
@@ -195,7 +357,9 @@ export const App: React.FC = () => {
               <RoleGuard
                 allowedRoles={['MOTA_ADMIN']}
                 currentRole={currentRole}
-                onSwitchPersona={setCurrentRole}
+                currentUser={currentUser}
+                onOpenLogin={() => handleOpenLogin('officer')}
+                onSwitchPersona={handleSwitchPersona}
                 featureName="No-Code / Low-Code Scheme Policy Configurator"
                 requiredClearanceLabel="Ministry Super Administrator (MoTA Admin)"
                 suggestedPersonaId="mota-admin"
@@ -227,6 +391,21 @@ export const App: React.FC = () => {
           setDefaultApplySchemeCode(code);
           setIsApplyModalOpen(true);
         }}
+      />
+
+      {/* Government SSO Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+        initialTab={authModalInitialTab}
+      />
+
+      {/* Unified Notification Center Modal */}
+      <NotificationModal
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
+        recipientId={currentUser?.id || 'app-user-01'}
       />
 
       {/* National Portal Footer */}
