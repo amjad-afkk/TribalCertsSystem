@@ -93,21 +93,21 @@ export const AdminAnalytics: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', width: '100%' }}>
         {/* Bottleneck Detection Table (Section 5.5) */}
-        <div className="gov-card">
+        <div className="gov-card" style={{ minWidth: 0 }}>
           <div className="gov-card-header">
             <div>
               <h3 style={{ fontSize: '1rem', color: '#0A2540' }}>
-                Scrutiny Bottleneck Detection (State Turnaround Analysis)
+                State-Level Scrutiny Bottleneck Radar
               </h3>
               <span style={{ fontSize: '0.75rem', color: '#718096' }}>
-                National Median Scrutiny Time: <strong>3.4 Days</strong>
+                Monitors Average Days in Verification across Nodal Centers
               </span>
             </div>
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
+          <div className="table-responsive">
             <table className="gov-table">
               <thead>
                 <tr>

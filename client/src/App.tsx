@@ -10,7 +10,8 @@ import { AdminAnalytics } from './components/analytics/AdminAnalytics';
 import { SchemeConfigurator } from './components/admin/SchemeConfigurator';
 import { DynamicApplicationForm } from './components/applicant/DynamicApplicationForm';
 import { RegionalChatbot } from './components/chatbot/RegionalChatbot';
-import { api } from './services/api';
+import { RoleGuard } from './components/common/RoleGuard';
+import { api, setApiRole } from './services/api';
 import type { Applicant } from './types';
 
 interface ErrorBoundaryProps {
@@ -63,6 +64,11 @@ export const App: React.FC = () => {
   const [isApplyModalOpen, setIsApplyModalOpen] = useState<boolean>(false);
   const [defaultApplySchemeCode, setDefaultApplySchemeCode] = useState<string | undefined>(undefined);
   const [applicants, setApplicants] = useState<Applicant[]>([]);
+
+  // Synchronize active role with API client for RBAC headers
+  useEffect(() => {
+    setApiRole(currentRole);
+  }, [currentRole]);
 
   useEffect(() => {
     const fetchApplicants = async () => {
@@ -144,19 +150,59 @@ export const App: React.FC = () => {
             )}
 
             {currentTab === 'verification' && (
-              <VerificationQueue currentRole={currentRole} />
+              <RoleGuard
+                allowedRoles={['INO', 'STATE_NODAL', 'MOTA_ADMIN']}
+                currentRole={currentRole}
+                onSwitchPersona={setCurrentRole}
+                featureName="Multi-Tier Nodal Scrutiny & Verification Queue"
+                requiredClearanceLabel="Institute Nodal Officer (INO) or State Nodal Officer (SNO)"
+                suggestedPersonaId="ino-officer"
+                suggestedPersonaName="Institute Nodal Officer (INO)"
+              >
+                <VerificationQueue currentRole={currentRole} />
+              </RoleGuard>
             )}
 
             {currentTab === 'committee' && (
-              <CommitteeSelectionPortal />
+              <RoleGuard
+                allowedRoles={['COMMITTEE', 'MOTA_ADMIN']}
+                currentRole={currentRole}
+                onSwitchPersona={setCurrentRole}
+                featureName="National Selection Committee Sign-Off Portal"
+                requiredClearanceLabel="National Selection Committee Member / Chair"
+                suggestedPersonaId="committee-member"
+                suggestedPersonaName="Selection Committee Chair"
+              >
+                <CommitteeSelectionPortal />
+              </RoleGuard>
             )}
 
             {currentTab === 'analytics' && (
-              <AdminAnalytics />
+              <RoleGuard
+                allowedRoles={['INO', 'STATE_NODAL', 'COMMITTEE', 'MOTA_ADMIN']}
+                currentRole={currentRole}
+                onSwitchPersona={setCurrentRole}
+                featureName="MoTA National Operations & Deficiency Radar"
+                requiredClearanceLabel="Nodal Officer or Ministry Administrator"
+                suggestedPersonaId="mota-admin"
+                suggestedPersonaName="MoTA Super Administrator"
+              >
+                <AdminAnalytics />
+              </RoleGuard>
             )}
 
             {currentTab === 'scheme-config' && (
-              <SchemeConfigurator />
+              <RoleGuard
+                allowedRoles={['MOTA_ADMIN']}
+                currentRole={currentRole}
+                onSwitchPersona={setCurrentRole}
+                featureName="No-Code / Low-Code Scheme Policy Configurator"
+                requiredClearanceLabel="Ministry Super Administrator (MoTA Admin)"
+                suggestedPersonaId="mota-admin"
+                suggestedPersonaName="MoTA Super Administrator"
+              >
+                <SchemeConfigurator />
+              </RoleGuard>
             )}
           </div>
         </main>

@@ -59,7 +59,7 @@ export class AiDocumentService {
 
     if (client && base64Data && mimeType) {
       try {
-        const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const model = client.getGenerativeModel({ model: 'gemini-3.6-flash' });
         const prompt = `
           You are a specialized Government of India Document Intelligence Verifier for the Ministry of Tribal Affairs (MoTA).
           Analyze the uploaded certificate/document image for an ST scholarship application.

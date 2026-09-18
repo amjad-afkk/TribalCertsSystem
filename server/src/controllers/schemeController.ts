@@ -90,7 +90,7 @@ export const createScheme = (req: Request, res: Response) => {
       `audit-${Date.now()}`,
       'SCHEME',
       id,
-      'MOTA_SUPER_ADMIN',
+      `Super Administrator (Role: ${(req as any).userRole || 'MOTA_ADMIN'})`,
       'NO_CODE_SCHEME_CREATED',
       `New scheme "${body.name}" (${body.code}) configured without code deployment.`
     );

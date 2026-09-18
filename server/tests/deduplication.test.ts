@@ -11,6 +11,22 @@ describe('DeduplicationEngine One Nation One Scholarship Fraud Protection', () =
     // In-memory isolated DB for testing
     db = getDb(true);
     runSeed(db);
+
+    // Seed active Post-Matric application for app-user-02 for deduplication conflict testing
+    db.prepare(`
+      INSERT INTO applications (
+        id, applicant_id, scheme_id, academic_year, status, current_stage, form_data, explainable_status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      'app-test-post-matric-02',
+      'app-user-02',
+      'scheme-post-matric',
+      '2026-2027',
+      'APPROVED',
+      'DBT_DISBURSEMENT',
+      JSON.stringify({ candidateName: 'Ramesh Kumar Oraon' }),
+      'Application verified and cleared for DBT disbursement'
+    );
   });
 
   after(() => {

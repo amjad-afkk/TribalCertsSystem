@@ -78,3 +78,20 @@ export interface SchemeMatchResult {
   reasons: string[];
   blockers: string[];
 }
+
+export type UserRole =
+  | 'APPLICANT'
+  | 'INO'
+  | 'STATE_NODAL'
+  | 'COMMITTEE'
+  | 'MOTA_ADMIN';
+
+export interface PersonaConfig {
+  id: string;
+  name: string;
+  role: UserRole;
+  designation: string;
+  clearanceLevel: string;
+  badgeColor: string;
+}
+

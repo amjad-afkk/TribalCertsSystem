@@ -156,3 +156,11 @@ export interface SchemeMatchResult {
   reasons: string[];
   blockers: string[];
 }
+
+export type UserRole =
+  | 'APPLICANT'
+  | 'INO'
+  | 'STATE_NODAL'
+  | 'COMMITTEE'
+  | 'MOTA_ADMIN';
+

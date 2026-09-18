@@ -9,6 +9,7 @@ import {
 } from '../controllers/applicationController.js';
 import { reviewApplication } from '../controllers/verificationController.js';
 import { extractAndVerifyDocument } from '../controllers/documentController.js';
+import { chatWithGemini } from '../controllers/chatbotController.js';
 import {
   runWaterfallSimulation,
   runNosSelectionSimulation,
@@ -16,15 +17,19 @@ import {
 } from '../controllers/selectionController.js';
 import { getMoTaAnalytics } from '../controllers/analyticsController.js';
 import { getDb } from '../db/connection.js';
+import { extractRole, requireRoles } from '../middleware/auth.js';
 
 const router = Router();
 
-// Schemes
+// Global role extraction & normalization for all incoming requests
+router.use(extractRole);
+
+// Schemes (Public discovery; Policy onboarding restricted to Super Admin)
 router.get('/schemes', getAllSchemes);
 router.get('/schemes/:id', getSchemeById);
-router.post('/schemes', createScheme);
+router.post('/schemes', requireRoles(['MOTA_ADMIN']), createScheme);
 
-// Scholarship Twin Simulator
+// Scholarship Twin Simulator (Open citizen self-service)
 router.post('/simulator/match', runSimulator);
 
 // Applications
@@ -33,19 +38,23 @@ router.get('/applications/:id', getApplicationById);
 router.post('/applications', submitApplication);
 router.post('/applications/:id/resubmit', resubmitDeficiency);
 
-// Verification & Scrutiny
-router.post('/applications/:id/review', reviewApplication);
+// Verification & Scrutiny (Restricted to Nodal & Ministry Officers)
+router.post('/applications/:id/review', requireRoles(['INO', 'STATE_NODAL', 'MOTA_ADMIN']), reviewApplication);
 
 // AI Document OCR & Verification
 router.post('/documents/extract', extractAndVerifyDocument);
 
+// AI Chatbot Assistant
+router.post('/chatbot', chatWithGemini);
+
 // Selection & Waterfalls
 router.post('/selection/waterfall', runWaterfallSimulation);
 router.get('/selection/nos', runNosSelectionSimulation);
-router.post('/selection/sign-off', signOffSelection);
+router.post('/selection/sign-off', requireRoles(['COMMITTEE', 'MOTA_ADMIN']), signOffSelection);
 
-// MoTA Analytics & Heatmaps
-router.get('/analytics', getMoTaAnalytics);
+// MoTA Analytics & Heatmaps (Restricted to Officers & Administrators)
+router.get('/analytics', requireRoles(['INO', 'STATE_NODAL', 'COMMITTEE', 'MOTA_ADMIN']), getMoTaAnalytics);
+
 
 // Applicant profiles list for demo switching
 router.get('/applicants', (req, res) => {

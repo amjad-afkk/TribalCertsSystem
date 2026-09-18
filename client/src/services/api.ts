@@ -1,19 +1,39 @@
 const API_BASE = 'http://localhost:4000/api';
 
+let activeUserRole: string = 'applicant-pooja';
+
+export const setApiRole = (role: string): void => {
+  activeUserRole = role;
+};
+
+export const getApiRole = (): string => activeUserRole;
+
+const getHeaders = (extra: Record<string, string> = {}): Record<string, string> => {
+  return {
+    'Content-Type': 'application/json',
+    'X-User-Role': activeUserRole,
+    ...extra
+  };
+};
+
 export const api = {
   // Schemes
   getSchemes: async () => {
-    const res = await fetch(`${API_BASE}/schemes`);
+    const res = await fetch(`${API_BASE}/schemes`, {
+      headers: getHeaders()
+    });
     return res.json();
   },
   getSchemeById: async (id: string) => {
-    const res = await fetch(`${API_BASE}/schemes/${id}`);
+    const res = await fetch(`${API_BASE}/schemes/${id}`, {
+      headers: getHeaders()
+    });
     return res.json();
   },
   createScheme: async (schemeData: any) => {
     const res = await fetch(`${API_BASE}/schemes`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(schemeData)
     });
     return res.json();
@@ -23,7 +43,7 @@ export const api = {
   runSimulator: async (criteria: any) => {
     const res = await fetch(`${API_BASE}/simulator/match`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(criteria)
     });
     return res.json();
@@ -32,17 +52,21 @@ export const api = {
   // Applications
   getApplications: async (params?: Record<string, string>) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-    const res = await fetch(`${API_BASE}/applications${qs}`);
+    const res = await fetch(`${API_BASE}/applications${qs}`, {
+      headers: getHeaders()
+    });
     return res.json();
   },
   getApplicationById: async (id: string) => {
-    const res = await fetch(`${API_BASE}/applications/${id}`);
+    const res = await fetch(`${API_BASE}/applications/${id}`, {
+      headers: getHeaders()
+    });
     return res.json();
   },
   submitApplication: async (payload: any) => {
     const res = await fetch(`${API_BASE}/applications`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(payload)
     });
     return res.json();
@@ -50,7 +74,7 @@ export const api = {
   resubmitDeficiency: async (id: string, payload: { explanation: string }) => {
     const res = await fetch(`${API_BASE}/applications/${id}/resubmit`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(payload)
     });
     return res.json();
@@ -60,7 +84,7 @@ export const api = {
   reviewApplication: async (id: string, payload: any) => {
     const res = await fetch(`${API_BASE}/applications/${id}/review`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(payload)
     });
     return res.json();
@@ -70,7 +94,7 @@ export const api = {
   extractAndVerifyDocument: async (payload: any) => {
     const res = await fetch(`${API_BASE}/documents/extract`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(payload)
     });
     return res.json();
@@ -80,19 +104,21 @@ export const api = {
   runWaterfallSimulation: async (payload?: any) => {
     const res = await fetch(`${API_BASE}/selection/waterfall`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(payload || {})
     });
     return res.json();
   },
   runNosSelection: async () => {
-    const res = await fetch(`${API_BASE}/selection/nos`);
+    const res = await fetch(`${API_BASE}/selection/nos`, {
+      headers: getHeaders()
+    });
     return res.json();
   },
   signOffSelection: async (payload: any) => {
     const res = await fetch(`${API_BASE}/selection/sign-off`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(payload)
     });
     return res.json();
@@ -100,13 +126,27 @@ export const api = {
 
   // Analytics
   getAnalytics: async () => {
-    const res = await fetch(`${API_BASE}/analytics`);
+    const res = await fetch(`${API_BASE}/analytics`, {
+      headers: getHeaders()
+    });
     return res.json();
   },
 
   // Applicants
   getApplicants: async () => {
-    const res = await fetch(`${API_BASE}/applicants`);
+    const res = await fetch(`${API_BASE}/applicants`, {
+      headers: getHeaders()
+    });
+    return res.json();
+  },
+
+  // AI Regional Chatbot
+  chatWithBot: async (payload: { message: string; language: string }) => {
+    const res = await fetch(`${API_BASE}/chatbot`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
     return res.json();
   }
 };

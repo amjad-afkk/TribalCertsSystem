@@ -109,9 +109,9 @@ export const VerificationQueue: React.FC<VerificationQueueProps> = ({ currentRol
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: selectedApp ? '1fr 1fr' : '1fr', gap: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: selectedApp ? 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))' : '1fr', gap: '1.5rem', width: '100%', maxWidth: '100%' }}>
         {/* Applications Worklist Table */}
-        <div className="gov-card">
+        <div className="gov-card" style={{ minWidth: 0 }}>
           <div className="gov-card-header">
             <h3 style={{ fontSize: '1rem', color: '#0A2540' }}>
               Pending Scrutiny Worklist ({applications.length})
@@ -119,20 +119,31 @@ export const VerificationQueue: React.FC<VerificationQueueProps> = ({ currentRol
             <span style={{ fontSize: '0.75rem', color: '#718096' }}>Click row to scrutinize</span>
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table className="gov-table">
-              <thead>
-                <tr>
-                  <th>App ID</th>
-                  <th>Student & Category</th>
-                  <th>Scheme</th>
-                  <th>AI Score</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {applications.map((app) => (
+          {applications.length === 0 ? (
+            <div className="gov-empty-state">
+              <div className="gov-empty-icon">
+                <CheckCircle size={24} />
+              </div>
+              <h4 style={{ color: '#0A2540' }}>Queue Clean & Verified</h4>
+              <p style={{ fontSize: '0.8125rem', color: '#718096', maxWidth: '380px' }}>
+                There are currently no pending applications requiring scrutiny at the {activeTier} level.
+              </p>
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <table className="gov-table">
+                <thead>
+                  <tr>
+                    <th>App ID</th>
+                    <th>Student & Category</th>
+                    <th>Scheme</th>
+                    <th>AI Score</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {applications.map((app) => (
                   <tr
                     key={app.id}
                     onClick={() => viewDetails(app.id)}
@@ -179,11 +190,12 @@ export const VerificationQueue: React.FC<VerificationQueueProps> = ({ currentRol
               </tbody>
             </table>
           </div>
+          )}
         </div>
 
         {/* Side-by-Side Scrutiny & AI Document Intelligence Panel */}
         {selectedApp && (
-          <div className="gov-card" style={{ borderTop: '4px solid #1A4D8F' }}>
+          <div className="gov-card" style={{ borderTop: '4px solid #1A4D8F', minWidth: 0 }}>
             <div className="gov-card-header">
               <div>
                 <span style={{ fontSize: '0.6875rem', color: '#1A4D8F', fontWeight: 600, textTransform: 'uppercase' }}>

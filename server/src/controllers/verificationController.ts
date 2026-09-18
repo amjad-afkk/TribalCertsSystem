@@ -1,11 +1,30 @@
 import { Request, Response } from 'express';
 import { getDb } from '../db/connection.js';
+import { AuthenticatedRequest } from '../middleware/auth.js';
 
-export const reviewApplication = (req: Request, res: Response) => {
+export const reviewApplication = (req: AuthenticatedRequest, res: Response) => {
   try {
     const db = getDb();
     const appId = req.params.id;
     const { tier, action, comments, reviewerId, reviewerName } = req.body;
+    const userRole = req.userRole || 'INO';
+
+    // Tier-level statutory clearance validation
+    if (userRole === 'INO' && tier && tier !== 'INO') {
+      return res.status(403).json({
+        success: false,
+        error: 'ACCESS_DENIED',
+        message: 'Institute Nodal Officer (INO) clearance restricted to Tier 1 scrutiny only.'
+      });
+    }
+
+    if (userRole === 'STATE_NODAL' && tier && tier !== 'STATE_NODAL') {
+      return res.status(403).json({
+        success: false,
+        error: 'ACCESS_DENIED',
+        message: 'State Nodal Officer (SNO) clearance restricted to Tier 2 State scrutiny only.'
+      });
+    }
 
     const app = db.prepare('SELECT * FROM applications WHERE id = ?').get(appId) as any;
     if (!app) {
@@ -64,7 +83,7 @@ export const reviewApplication = (req: Request, res: Response) => {
       comments || ''
     );
 
-    // Insert audit log
+    // Insert audit log with explicit role recording
     db.prepare(`
       INSERT INTO audit_logs (id, entity_type, entity_id, actor, action, details)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -72,9 +91,9 @@ export const reviewApplication = (req: Request, res: Response) => {
       `audit-${Date.now()}`,
       'APPLICATION',
       appId,
-      reviewerName || 'VERIFIER',
+      `${reviewerName || 'Nodal Officer'} (Role: ${userRole})`,
       `APPLICATION_${action}`,
-      `Action ${action} taken at stage ${tier}. Notes: ${comments}`
+      `Action ${action} taken at stage ${tier}. Notes: ${comments || 'No comments provided'}`
     );
 
     res.json({

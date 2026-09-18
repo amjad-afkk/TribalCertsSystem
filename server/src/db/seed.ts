@@ -30,7 +30,7 @@ export function runSeed(db = getDb()) {
       reservationWaterfall: JSON.stringify([]),
       documentChecklist: JSON.stringify([
         { docType: 'CASTE_CERT', title: 'Valid ST Community Certificate', required: true },
-        { docType: 'INCOME_CERT', title: 'Competent Authority Income Certificate (≤ ₹2.5L)', required: true },
+        { docType: 'INCOME_CERT', title: 'Competent Authority Income Certificate (â‰¤ â‚¹2.5L)', required: true },
         { docType: 'PREV_MARKSHEET', title: 'Previous Class Marksheet', required: true },
         { docType: 'BANK_PASSBOOK', title: 'Aadhaar-Seeded Bank Passbook / Mandate', required: true }
       ]),
@@ -54,7 +54,7 @@ export function runSeed(db = getDb()) {
       reservationWaterfall: JSON.stringify([]),
       documentChecklist: JSON.stringify([
         { docType: 'CASTE_CERT', title: 'Valid ST Community Certificate', required: true },
-        { docType: 'INCOME_CERT', title: 'Annual Income Certificate (≤ ₹2.5L)', required: true },
+        { docType: 'INCOME_CERT', title: 'Annual Income Certificate (â‰¤ â‚¹2.5L)', required: true },
         { docType: 'FEE_RECEIPT', title: 'Current Year Admission / Fee Receipt', required: true },
         { docType: 'PREV_MARKSHEET', title: 'Last Qualifying Examination Marksheet', required: true },
         { docType: 'BANK_PASSBOOK', title: 'Aadhaar-Seeded Bank Account Passbook', required: true }
@@ -79,7 +79,7 @@ export function runSeed(db = getDb()) {
       reservationWaterfall: JSON.stringify([]),
       documentChecklist: JSON.stringify([
         { docType: 'CASTE_CERT', title: 'Valid ST Certificate', required: true },
-        { docType: 'INCOME_CERT', title: 'Income Certificate (≤ ₹6.0L)', required: true },
+        { docType: 'INCOME_CERT', title: 'Income Certificate (â‰¤ â‚¹6.0L)', required: true },
         { docType: 'ALLOTMENT_LETTER', title: 'Admission / Seat Allotment Letter in Notified Institute', required: true },
         { docType: 'FEE_STRUCTURE', title: 'Institute Verified Fee Structure Breakdown', required: true },
         { docType: 'BANK_PASSBOOK', title: 'Student Bank Account Details', required: true }
@@ -102,7 +102,7 @@ export function runSeed(db = getDb()) {
       totalSlots: 750,
       selectionMethod: 'MERIT_WATERFALL',
       reservationWaterfall: JSON.stringify([
-        { tier: 'DIVYANGJAN', label: 'Divyangjan (PwD ≥ 40%)', priority: 1, allocatedSlots: 38, spilloverTargetTier: 'PVTG' },
+        { tier: 'DIVYANGJAN', label: 'Divyangjan (PwD â‰¥ 40%)', priority: 1, allocatedSlots: 38, spilloverTargetTier: 'PVTG' },
         { tier: 'PVTG', label: 'Particularly Vulnerable Tribal Groups (PVTG)', priority: 2, allocatedSlots: 75, spilloverTargetTier: 'FEMALE_ST' },
         { tier: 'FEMALE_ST', label: 'Female ST Candidates (30% Sub-quota)', priority: 3, allocatedSlots: 225, spilloverTargetTier: 'ST_GENERAL' },
         { tier: 'ST_GENERAL', label: 'Open Scheduled Tribe (ST Others)', priority: 4, allocatedSlots: 412, spilloverTargetTier: null }
@@ -122,7 +122,7 @@ export function runSeed(db = getDb()) {
       id: 'scheme-nos',
       code: 'AZKMI',
       name: 'National Overseas Scholarship for ST Candidates (NOS)',
-      level: 'Master’s / Ph.D / Post-Doctoral Abroad',
+      level: 'Masterâ€™s / Ph.D / Post-Doctoral Abroad',
       description: 'Prestigious scholarship for 20 ST scholars to pursue overseas education in QS World Ranked top universities.',
       legacyPortal: 'overseas.tribal.gov.in',
       incomeCeiling: 600000,
@@ -138,7 +138,7 @@ export function runSeed(db = getDb()) {
       ]),
       documentChecklist: JSON.stringify([
         { docType: 'CASTE_CERT', title: 'Valid ST Certificate', required: true },
-        { docType: 'INCOME_CERT', title: 'Family Income Certificate (≤ ₹6.0L)', required: true },
+        { docType: 'INCOME_CERT', title: 'Family Income Certificate (â‰¤ â‚¹6.0L)', required: true },
         { docType: 'OVERSEAS_OFFER', title: 'Unconditional Admission Letter from Foreign University', required: true },
         { docType: 'PASSPORT', title: 'Valid Indian Passport', required: true },
         { docType: 'GRE_IELTS_SCORE', title: 'Standardized Exam Scorecard (IELTS/TOEFL/GRE)', required: true }
@@ -231,7 +231,7 @@ export function runSeed(db = getDb()) {
       annualIncome: 240000,
       state: 'Jharkhand',
       district: 'Ranchi',
-      instituteName: 'St. Xavier’s College, Ranchi',
+      instituteName: 'St. Xavierâ€™s College, Ranchi',
       courseLevel: 'Class XII (Science)',
       academicPercentage: 81.2,
       bankAccountHash: 'bank_hash_pnb_9182'
@@ -304,14 +304,116 @@ export function runSeed(db = getDb()) {
     );
   }
 
-  // 4. Seed Applications & Document Scenarios
-  const insertApp = db.prepare(`
+  // 4. Seed Realistic Applications for Demonstration
+  const insertApplication = db.prepare(`
     INSERT OR REPLACE INTO applications (
       id, applicant_id, scheme_id, academic_year, status, current_stage,
       submitted_at, form_data, explainable_status, deficiency_reason, ai_discrepancy_score
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
+  const applications = [
+    {
+      id: 'appln-nfst-01',
+      applicantId: 'app-user-01',
+      schemeId: 'scheme-nfst',
+      academicYear: '2026-2027',
+      status: 'SHORTLISTED',
+      currentStage: 'COMMITTEE_REVIEW',
+      submittedAt: '2026-08-14T10:30:00.000Z',
+      formData: JSON.stringify({
+        candidateName: 'Pooja Maravi',
+        phdTopic: 'Ethnobotany and Indigenous Healing Systems of the Baiga Community',
+        guideName: 'Prof. Ananya Sen, School of Social Sciences, JNU',
+        institute: 'Jawaharlal Nehru University, New Delhi'
+      }),
+      explainableStatus: 'Application verified by INO and MoTA Scrutiny. Shortlisted under PVTG Priority Bucket for Final Selection Committee sign-off.',
+      deficiencyReason: null,
+      aiDiscrepancyScore: 98.5
+    },
+    {
+      id: 'appln-postmatric-02',
+      applicantId: 'app-user-02',
+      schemeId: 'scheme-post-matric',
+      academicYear: '2026-2027',
+      status: 'DISBURSED',
+      currentStage: 'DISBURSEMENT',
+      submittedAt: '2026-07-20T14:15:00.000Z',
+      formData: JSON.stringify({
+        candidateName: 'Ramesh Kumar Oraon',
+        courseName: 'Higher Secondary (Science Stream)',
+        institute: 'St. Xavier’s College, Ranchi'
+      }),
+      explainableStatus: 'Annual DBT of ₹12,500 successfully credited to Aadhaar-linked Bank Account via PFMS-DBT transaction TXN981240182.',
+      deficiencyReason: null,
+      aiDiscrepancyScore: 99.0
+    },
+    {
+      id: 'appln-nos-03',
+      applicantId: 'app-user-03',
+      schemeId: 'scheme-nos',
+      academicYear: '2026-2027',
+      status: 'SHORTLISTED',
+      currentStage: 'SELECTION_FINALIZED',
+      submittedAt: '2026-06-11T09:45:00.000Z',
+      formData: JSON.stringify({
+        candidateName: 'Sunita Soren',
+        foreignUniversity: 'University of Oxford',
+        qsRank: 3,
+        courseName: 'M.Sc in Environmental Change and Management',
+        maintenanceCurrency: 'GBP'
+      }),
+      explainableStatus: 'Qualified under Priority Tier 1 (QS World Ranking #3). Forex allowance calculated for GBP £15,400/yr. Awaiting Indian Mission dispatch.',
+      deficiencyReason: null,
+      aiDiscrepancyScore: 99.4
+    },
+    {
+      id: 'appln-nfst-04',
+      applicantId: 'app-user-04',
+      schemeId: 'scheme-nfst',
+      academicYear: '2026-2027',
+      status: 'SHORTLISTED',
+      currentStage: 'COMMITTEE_REVIEW',
+      submittedAt: '2026-08-05T11:20:00.000Z',
+      formData: JSON.stringify({
+        candidateName: 'Kailash Birhor',
+        phdTopic: 'Taxonomic Classification of Medicinal Flora in Chota Nagpur Plateau',
+        guideName: 'Dr. V. K. Singh, Department of Botany, BHU',
+        institute: 'Banaras Hindu University'
+      }),
+      explainableStatus: 'Shortlisted under Divyangjan (PwD ≥ 40%) Reservation Tier 1. Full 5-year fellowship provision allocated.',
+      deficiencyReason: null,
+      aiDiscrepancyScore: 97.8
+    },
+    {
+      id: 'appln-postmatric-05',
+      applicantId: 'app-user-05',
+      schemeId: 'scheme-post-matric',
+      academicYear: '2026-2027',
+      status: 'DEFICIENCY_FLAGGED',
+      currentStage: 'INO_SCRUTINY',
+      submittedAt: '2026-09-02T16:00:00.000Z',
+      formData: JSON.stringify({
+        candidateName: 'Amitabh Gond',
+        courseName: 'B.Tech in Computer Science',
+        claimedIncome: 240000,
+        institute: 'National Institute of Technology, Raipur'
+      }),
+      explainableStatus: 'Discrepancy Flagged: Uploaded Income Certificate shows ₹2,80,000, whereas Application Form states ₹2,40,000. Document exceeds the ₹2.5L statutory cap for Post-Matric.',
+      deficiencyReason: 'Discrepancy: Income Certificate states ₹2,80,000, exceeding the scheme cap of ₹2,50,000. Please clarify or provide the latest competent authority certificate.',
+      aiDiscrepancyScore: 45.0
+    }
+  ];
+
+  for (const app of applications) {
+    insertApplication.run(
+      app.id, app.applicantId, app.schemeId, app.academicYear,
+      app.status, app.currentStage, app.submittedAt, app.formData,
+      app.explainableStatus, app.deficiencyReason, app.aiDiscrepancyScore
+    );
+  }
+
+  // 5. Seed Demo Documents
   const insertDoc = db.prepare(`
     INSERT OR REPLACE INTO documents (
       id, application_id, doc_type, file_name, file_url,
@@ -319,147 +421,54 @@ export function runSeed(db = getDb()) {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  // Application 1: Pooja Maravi -> NFST (Eligible, Shortlisted, Demonstrates Waterfall)
-  insertApp.run(
-    'appln-nfst-01',
-    'app-user-01',
-    'scheme-nfst',
-    '2026-2027',
-    'SHORTLISTED',
-    'COMMITTEE_REVIEW',
-    '2026-09-02T10:30:00Z',
-    JSON.stringify({
-      phdTopic: 'Ethnobotany & Indigenous Livelihoods in Baiga Chak',
-      guideName: 'Prof. Ananya Sen',
-      registrationDate: '2025-08-15'
-    }),
-    'Application verified by INO and MoTA Scrutiny. Shortlisted under PVTG Priority Bucket for Final Selection Committee sign-off.',
-    null,
-    98.5
-  );
+  const documents = [
+    {
+      id: 'doc-01-caste',
+      applicationId: 'appln-nfst-01',
+      docType: 'CASTE_CERT',
+      fileName: 'pooja_pvtg_baiga_certificate.pdf',
+      fileUrl: '/uploads/sample_caste_cert.pdf',
+      ocrExtracted: JSON.stringify({
+        candidateName: 'Pooja Maravi',
+        casteCategory: 'Baiga (Particularly Vulnerable Tribal Group)',
+        issueDate: '2022-06-18',
+        issuingAuthority: 'Sub-Divisional Officer (Civil), Revenue Division',
+        rawConfidence: 98.8
+      }),
+      status: 'ACCEPTED',
+      discrepancyNote: null
+    },
+    {
+      id: 'doc-05-income',
+      applicationId: 'appln-postmatric-05',
+      docType: 'INCOME_CERT',
+      fileName: 'amitabh_income_cert_2026.pdf',
+      fileUrl: '/uploads/sample_income_cert.pdf',
+      ocrExtracted: JSON.stringify({
+        candidateName: 'Amitabh Gond',
+        annualIncome: 280000,
+        issueDate: '2026-04-10',
+        issuingAuthority: 'Office of the Tehsildar & Executive Magistrate',
+        rawConfidence: 97.4
+      }),
+      status: 'DEFICIENCY_FLAGGED',
+      discrepancyNote: 'Extracted income ₹2,80,000 conflicts with form value ₹2,40,000 and exceeds the maximum permissible limit of ₹2,50,000 for Post-Matric.'
+    }
+  ];
 
-  insertDoc.run(
-    'doc-01-caste',
-    'appln-nfst-01',
-    'CASTE_CERT',
-    'pooja_pvtg_baiga_certificate.pdf',
-    '/uploads/pooja_caste.pdf',
-    JSON.stringify({
-      candidateName: 'Pooja Maravi',
-      tribe: 'Baiga (PVTG)',
-      issuingAuthority: 'Sub-Divisional Officer, Dindori (MP)',
-      validity: 'Permanent'
-    }),
-    'ACCEPTED',
-    null
-  );
+  for (const doc of documents) {
+    insertDoc.run(
+      doc.id, doc.applicationId, doc.docType, doc.fileName, doc.fileUrl,
+      doc.ocrExtracted, doc.status, doc.discrepancyNote
+    );
+  }
 
-  // Application 2: Ramesh Oraon -> Post-Matric (Approved, DBT Disbursed)
-  insertApp.run(
-    'appln-postmatric-02',
-    'app-user-02',
-    'scheme-post-matric',
-    '2026-2027',
-    'DISBURSED',
-    'DISBURSEMENT',
-    '2026-08-20T14:15:00Z',
-    JSON.stringify({
-      currentStandard: 'Class XII (Science)',
-      annualTuitionFee: 12500
-    }),
-    'Annual DBT of ₹12,500 successfully credited to Aadhaar-linked Bank Account via PFMS-DBT transaction TXN981240182.',
-    null,
-    99.2
-  );
-
-  // Application 3: Sunita Soren -> NOS (Priority Tier 1: Oxford University QS Rank #3)
-  insertApp.run(
-    'appln-nos-03',
-    'app-user-03',
-    'scheme-nos',
-    '2026-2027',
-    'SHORTLISTED',
-    'SELECTION_FINALIZED',
-    '2026-09-05T09:00:00Z',
-    JSON.stringify({
-      university: 'University of Oxford',
-      qsRank: 3,
-      course: 'M.Sc Environmental Change',
-      admissionStatus: 'Unconditional Offer Letter',
-      annualLivingAllowanceGbp: 15400
-    }),
-    'Qualified under Priority Tier 1 (QS World Ranking #3). Forex allowance calculated for GBP £15,400/yr. Awaiting Indian Mission dispatch.',
-    null,
-    97.8
-  );
-
-  // Application 4: Kailash Birhor -> NFST (PwD/Divyangjan Tier 1)
-  insertApp.run(
-    'appln-nfst-04',
-    'app-user-04',
-    'scheme-nfst',
-    '2026-2027',
-    'SHORTLISTED',
-    'COMMITTEE_REVIEW',
-    '2026-09-08T11:45:00Z',
-    JSON.stringify({
-      phdTopic: 'Genetic Preservation of Medicinal Flora in Chota Nagpur',
-      pwdPercentage: 60,
-      disabilityType: 'Locomotor'
-    }),
-    'Shortlisted under Divyangjan (PwD ≥ 40%) Reservation Tier 1. Full 5-year fellowship provision allocated.',
-    null,
-    99.0
-  );
-
-  // Application 5: Amitabh Gond -> Post-Matric (Deficiency Flagged: Income Discrepancy detected by AI)
-  insertApp.run(
-    'appln-postmatric-05',
-    'app-user-05',
-    'scheme-post-matric',
-    '2026-2027',
-    'DEFICIENCY_FLAGGED',
-    'INO_SCRUTINY',
-    '2026-09-12T16:20:00Z',
-    JSON.stringify({
-      claimedAnnualIncome: 240000,
-      institute: 'NIT Raipur'
-    }),
-    'Discrepancy Flagged: Uploaded Income Certificate shows ₹2,80,000, whereas Application Form states ₹2,40,000. Document exceeds the ₹2.5L statutory cap for Post-Matric.',
-    'Discrepancy: Income Certificate states ₹2,80,000, exceeding the scheme cap of ₹2,50,000. Please clarify or provide the latest competent authority certificate.',
-    42.0
-  );
-
-  insertDoc.run(
-    'doc-05-income',
-    'appln-postmatric-05',
-    'INCOME_CERT',
-    'amitabh_income_cert_2026.pdf',
-    '/uploads/amitabh_income.pdf',
-    JSON.stringify({
-      nameOnCertificate: 'Amitabh Gond',
-      annualIncomeInr: 280000,
-      issuingTehsil: 'Jagdalpur, Bastar',
-      discrepancyFlag: 'EXCEEDS_INCOME_CEILING_AND_MISMATCH'
-    }),
-    'DEFICIENCY_FLAGGED',
-    'Extracted income ₹2,80,000 conflicts with form value ₹2,40,000 and exceeds the maximum permissible limit of ₹2,50,000 for Post-Matric.'
-  );
-
-  // 5. Seed Audit Logs
-  const insertAudit = db.prepare(`
-    INSERT OR REPLACE INTO audit_logs (id, entity_type, entity_id, actor, action, details, timestamp)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  insertAudit.run('audit-01', 'APPLICATION', 'appln-nfst-01', 'INO_JNU_OFFICER', 'VERIFIED_PHYSICAL_DOCUMENTS', 'All original caste and fellowship registration certificates verified successfully.', '2026-09-03T11:00:00Z');
-  insertAudit.run('audit-02', 'APPLICATION', 'appln-postmatric-05', 'AI_INTELLIGENCE_SERVICE', 'DETECTED_DISCREPANCY', 'Gemini OCR detected income mismatch: Form ₹2.4L vs Document ₹2.8L.', '2026-09-12T16:21:00Z');
-  insertAudit.run('audit-03', 'APPLICATION', 'appln-nos-03', 'MOTA_SELECTION_COMMITTEE', 'QS_TIER_1_ENDORSEMENT', 'Candidate admission verified with Oxford admissions portal. Priority Tier 1 confirmed.', '2026-09-06T15:30:00Z');
-
-  console.log('Database successfully seeded with 5 Schemes, QS Universities, Applicants, and Discrepancy Scenarios.');
+  console.log('Database seeded with 5 Schemes, QS Universities, 5 Applicants, 5 Applications, and Demo Documents.');
 }
 
 // Auto-run if executed directly
 if (process.argv[1]?.endsWith('seed.ts')) {
   runSeed();
 }
+
+

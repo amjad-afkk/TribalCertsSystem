@@ -135,6 +135,8 @@ export const DynamicApplicationForm: React.FC<DynamicApplicationFormProps> = ({
         width: '100%',
         maxHeight: '90vh',
         overflowY: 'auto',
+        overflowX: 'hidden',
+        boxSizing: 'border-box',
         backgroundColor: '#FFFFFF',
         padding: '1.75rem',
         position: 'relative'

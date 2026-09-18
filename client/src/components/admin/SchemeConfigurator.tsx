@@ -8,6 +8,7 @@ export const SchemeConfigurator: React.FC = () => {
   const [, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [createSuccess, setCreateSuccess] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   // New scheme form state
   const [code, setCode] = useState('');
@@ -42,6 +43,7 @@ export const SchemeConfigurator: React.FC = () => {
 
   const handleCreateScheme = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCreateError(null);
     try {
       const resp = await api.createScheme({
         code: code.toUpperCase().trim(),
@@ -77,9 +79,11 @@ export const SchemeConfigurator: React.FC = () => {
           setName('');
           loadSchemes();
         }, 1200);
+      } else {
+        setCreateError(resp.message || 'Access Denied: MoTA Super Admin clearance required.');
       }
-    } catch (err) {
-      console.error('Failed to create scheme:', err);
+    } catch (err: any) {
+      setCreateError(err.message || 'Failed to onboard scheme');
     }
   };
 
@@ -128,6 +132,11 @@ export const SchemeConfigurator: React.FC = () => {
             </div>
           ) : (
             <form onSubmit={handleCreateScheme}>
+              {createError && (
+                <div style={{ backgroundColor: '#FDF0ED', border: '1px solid #F7B8B8', color: '#A61C1C', padding: '0.75rem', borderRadius: '4px', marginBottom: '1rem', fontSize: '0.8125rem', fontWeight: 500 }}>
+                  ⚠️ {createError}
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                 <div className="form-group">
                   <label className="form-label">Official Scheme Code</label>

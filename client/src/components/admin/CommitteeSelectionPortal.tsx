@@ -7,6 +7,7 @@ export const CommitteeSelectionPortal: React.FC = () => {
   const [nosData, setNosData] = useState<any | null>(null);
   const [signedOffMap, setSignedOffMap] = useState<Record<string, boolean>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [signOffError, setSignOffError] = useState<string | null>(null);
 
   const loadNosData = async () => {
     setLoading(true);
@@ -28,6 +29,7 @@ export const CommitteeSelectionPortal: React.FC = () => {
 
   const handleSignOff = async (appId: string, candName: string) => {
     setActionLoading(appId);
+    setSignOffError(null);
     try {
       const resp = await api.signOffSelection({
         applicationId: appId,
@@ -36,9 +38,11 @@ export const CommitteeSelectionPortal: React.FC = () => {
       });
       if (resp.success) {
         setSignedOffMap(prev => ({ ...prev, [appId]: true }));
+      } else {
+        setSignOffError(resp.message || 'Access Denied: Selection Committee clearance required.');
       }
-    } catch (err) {
-      console.error('Sign-off error:', err);
+    } catch (err: any) {
+      setSignOffError(err.message || 'Sign-off error occurred');
     } finally {
       setActionLoading(null);
     }
@@ -122,6 +126,12 @@ export const CommitteeSelectionPortal: React.FC = () => {
                 </span>
               </div>
             </div>
+
+            {signOffError && (
+              <div style={{ backgroundColor: '#FDF0ED', border: '1px solid #F7B8B8', color: '#A61C1C', padding: '0.75rem 1rem', borderRadius: '4px', margin: '0 1.25rem 1rem', fontSize: '0.8125rem', fontWeight: 500 }}>
+                ⚠️ {signOffError}
+              </div>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {nosData.selections.map((cand: any) => {

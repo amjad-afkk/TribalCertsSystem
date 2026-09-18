@@ -180,6 +180,7 @@ export const signOffSelection = (req: Request, res: Response) => {
   try {
     const db = getDb();
     const { schemeId, applicationId, committeeMember, comments } = req.body;
+    const actorRole = (req as any).userRole || 'COMMITTEE';
 
     const now = new Date().toISOString();
 
@@ -195,7 +196,7 @@ export const signOffSelection = (req: Request, res: Response) => {
       applicationId
     );
 
-    // Audit log
+    // Audit log with actor role
     db.prepare(`
       INSERT INTO audit_logs (id, entity_type, entity_id, actor, action, details)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -203,7 +204,7 @@ export const signOffSelection = (req: Request, res: Response) => {
       `audit-${Date.now()}`,
       'APPLICATION',
       applicationId,
-      committeeMember || 'SELECTION_COMMITTEE_CHAIR',
+      `${committeeMember || 'SELECTION_COMMITTEE_CHAIR'} (Role: ${actorRole})`,
       'COMMITTEE_SIGN_OFF',
       `Selection finalized by committee. Rationale: ${comments || 'Merit and reservation criteria satisfied.'}`
     );

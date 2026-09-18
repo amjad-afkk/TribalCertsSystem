@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Send, Bot } from 'lucide-react';
+import { X, Send, Bot, Sparkles, Loader2 } from 'lucide-react';
+import { api } from '../../services/api';
 
 interface RegionalChatbotProps {
   onSelectScheme?: (schemeCode: string) => void;
@@ -9,10 +10,12 @@ export const RegionalChatbot: React.FC<RegionalChatbotProps> = ({ onSelectScheme
   const [isOpen, setIsOpen] = useState(false);
   const [language, setLanguage] = useState<'EN' | 'HI' | 'OD' | 'GON'>('EN');
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Array<{ sender: 'bot' | 'user'; text: string; schemeCode?: string }>>([
+  const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState<Array<{ sender: 'bot' | 'user'; text: string; schemeCode?: string; isAi?: boolean }>>([
     {
       sender: 'bot',
-      text: 'Namaste! I am the MoTA Tribal Scholarship Guidance Assistant. I can help you find eligible schemes, checklists, or answers in English, Hindi, Odia, or Gondi. How can I help you today?'
+      text: 'Namaste! I am the MoTA AI Guidance Counselor. Powered by Gemini 3.6 Flash, I can answer your queries in English, Hindi, Odia, or Gondi and guide you to eligible tribal scholarships. How can I help you today?',
+      isAi: true
     }
   ]);
 
@@ -63,14 +66,36 @@ export const RegionalChatbot: React.FC<RegionalChatbotProps> = ({ onSelectScheme
     }
   };
 
-  const handleSend = (textToSend?: string) => {
-    const q = (textToSend || input).toLowerCase();
-    if (!q.trim()) return;
+  const handleSend = async (textToSend?: string) => {
+    const messageText = (textToSend || input).trim();
+    if (!messageText || isLoading) return;
 
-    setMessages(prev => [...prev, { sender: 'user', text: textToSend || input }]);
+    setMessages(prev => [...prev, { sender: 'user', text: messageText }]);
     setInput('');
+    setIsLoading(true);
 
+    try {
+      const res = await api.chatWithBot({ message: messageText, language });
+      if (res && res.success) {
+        setMessages(prev => [
+          ...prev,
+          {
+            sender: 'bot',
+            text: res.reply,
+            schemeCode: res.schemeCode,
+            isAi: res.method === 'GEMINI_AI'
+          }
+        ]);
+        setIsLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('Live chatbot API failed, engaging instant offline fallback:', err);
+    }
+
+    // Graceful offline fallback
     setTimeout(() => {
+      const q = messageText.toLowerCase();
       const langDict = knowledgeBase[language] || knowledgeBase.EN;
       let respObj = langDict.default;
 
@@ -82,12 +107,17 @@ export const RegionalChatbot: React.FC<RegionalChatbotProps> = ({ onSelectScheme
         respObj = langDict.income || langDict.default;
       }
 
-      setMessages(prev => [...prev, {
-        sender: 'bot',
-        text: respObj.reply,
-        schemeCode: respObj.scheme
-      }]);
-    }, 450);
+      setMessages(prev => [
+        ...prev,
+        {
+          sender: 'bot',
+          text: respObj.reply,
+          schemeCode: respObj.scheme,
+          isAi: false
+        }
+      ]);
+      setIsLoading(false);
+    }, 300);
   };
 
   return (
@@ -191,9 +221,16 @@ export const RegionalChatbot: React.FC<RegionalChatbotProps> = ({ onSelectScheme
                   borderRadius: '6px',
                   maxWidth: '85%',
                   fontSize: '0.8125rem',
-                  lineHeight: 1.4
+                  lineHeight: 1.4,
+                  wordBreak: 'break-word'
                 }}
               >
+                {m.sender === 'bot' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem', fontSize: '0.6875rem', color: m.isAi ? '#1A4D8F' : '#64748B', fontWeight: 600 }}>
+                    <Sparkles size={11} />
+                    <span>{m.isAi ? 'Gemini 3.6 Flash' : 'MoTA Advisory'}</span>
+                  </div>
+                )}
                 {m.text}
                 {m.schemeCode && onSelectScheme && (
                   <div style={{ marginTop: '0.5rem', borderTop: '1px solid #E2E8F0', paddingTop: '0.35rem' }}>
@@ -211,25 +248,45 @@ export const RegionalChatbot: React.FC<RegionalChatbotProps> = ({ onSelectScheme
                 )}
               </div>
             ))}
+
+            {isLoading && (
+              <div
+                style={{
+                  alignSelf: 'flex-start',
+                  backgroundColor: '#FFFFFF',
+                  color: '#1A4D8F',
+                  border: '1px solid #BCD4F0',
+                  padding: '0.65rem 0.875rem',
+                  borderRadius: '6px',
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                <span>Consulting MoTA Knowledge Engine...</span>
+              </div>
+            )}
           </div>
 
-          {/* Quick Prompts */}
-          <div style={{ padding: '0.5rem 0.75rem', backgroundColor: '#F1F5F9', borderTop: '1px solid #E2E8F0', display: 'flex', gap: '0.35rem', overflowX: 'auto', fontSize: '0.6875rem' }}>
+          {/* Quick Prompts (wrap without horizontal scrollbar) */}
+          <div style={{ padding: '0.5rem 0.75rem', backgroundColor: '#F1F5F9', borderTop: '1px solid #E2E8F0', display: 'flex', gap: '0.35rem', flexWrap: 'wrap', fontSize: '0.6875rem' }}>
             <button
               onClick={() => handleSend('Ph.D research fellowship')}
-              style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', cursor: 'pointer' }}
             >
               🎓 Ph.D Fellowship
             </button>
             <button
               onClick={() => handleSend('Foreign studies abroad')}
-              style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', cursor: 'pointer' }}
             >
               ✈️ Studies Abroad (NOS)
             </button>
             <button
               onClick={() => handleSend('Income limit cap')}
-              style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', cursor: 'pointer' }}
             >
               💰 Income Caps
             </button>
