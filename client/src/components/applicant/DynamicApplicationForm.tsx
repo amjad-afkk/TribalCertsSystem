@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import type { Scheme, Applicant } from '../../types';
-import { X, CheckCircle, Sparkles, Send, ShieldAlert, DownloadCloud } from 'lucide-react';
+import { X, CheckCircle, Sparkles, Send, ShieldAlert, DownloadCloud, Upload, Trash2, FileText, AlertTriangle, RefreshCw } from 'lucide-react';
 import { DigiLockerModal } from './DigiLockerModal';
 
 interface DynamicApplicationFormProps {
@@ -23,12 +23,14 @@ export const DynamicApplicationForm: React.FC<DynamicApplicationFormProps> = ({
   const [uploadedDocs, setUploadedDocs] = useState<Array<{
     docType: string;
     fileName: string;
+    fileUrl?: string;
     status: string;
+    ocrExtracted?: any;
     extracted?: any;
     discrepancyNote?: string | null;
   }>>([]);
 
-  const [ocrLoading, setOcrLoading] = useState(false);
+  const [uploadingDocType, setUploadingDocType] = useState<string | null>(null);
   const [ocrResult, setOcrResult] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -40,14 +42,31 @@ export const DynamicApplicationForm: React.FC<DynamicApplicationFormProps> = ({
     extractedData: any;
     docUri: string;
   }) => {
+    // Run cross-consistency check against application form parameters
+    let hasDiscrepancy = false;
+    let discrepancyNote: string | null = null;
+    const claimedIncome = formData.claimedIncome !== undefined ? Number(formData.claimedIncome) : applicant.annualIncome;
+
+    if (doc.extractedData?.annualIncome && claimedIncome) {
+      if (Math.abs(doc.extractedData.annualIncome - claimedIncome) > 1000) {
+        hasDiscrepancy = true;
+        const exceedsCeiling = activeScheme?.incomeCeiling != null && doc.extractedData.annualIncome > activeScheme.incomeCeiling;
+        discrepancyNote = exceedsCeiling
+          ? `DigiLocker Income certificate states ₹${doc.extractedData.annualIncome.toLocaleString('en-IN')}, which exceeds statutory scheme ceiling of ₹${activeScheme?.incomeCeiling?.toLocaleString('en-IN')}, whereas form states ₹${claimedIncome.toLocaleString('en-IN')}.`
+          : `Income mismatch: DigiLocker Certificate states ₹${doc.extractedData.annualIncome.toLocaleString('en-IN')}, but application claimed ₹${claimedIncome.toLocaleString('en-IN')}.`;
+      }
+    }
+
     setUploadedDocs(prev => [
       ...prev.filter(d => d.docType !== doc.docType),
       {
         docType: doc.docType,
         fileName: doc.fileName,
-        status: 'DIGILOCKER_VERIFIED',
+        fileUrl: doc.docUri,
+        status: hasDiscrepancy ? 'DEFICIENCY_FLAGGED' : 'DIGILOCKER_VERIFIED',
+        ocrExtracted: doc.extractedData,
         extracted: doc.extractedData,
-        discrepancyNote: null
+        discrepancyNote
       }
     ]);
   };
@@ -74,17 +93,26 @@ export const DynamicApplicationForm: React.FC<DynamicApplicationFormProps> = ({
     setFormData(prev => ({ ...prev, [key]: value }));
   };
 
-  // Simulate AI OCR on a chosen document type
-  const handleSimulateAiOcr = async (docType: string, sampleFileName: string) => {
-    setOcrLoading(true);
+  // Process real document upload with Gemini Multimodal AI extraction
+  const handleProcessDocument = async (
+    docType: string,
+    fileName: string,
+    base64Data?: string,
+    mimeType?: string,
+    fileUrl?: string
+  ) => {
+    setUploadingDocType(docType);
     setOcrResult(null);
     try {
+      const currentClaimedIncome = formData.claimedIncome !== undefined ? Number(formData.claimedIncome) : applicant.annualIncome;
       const resp = await api.extractAndVerifyDocument({
         docType,
-        fileName: sampleFileName,
+        fileName,
+        base64Data,
+        mimeType,
         formData: {
           candidateName: applicant.name,
-          annualIncome: applicant.annualIncome,
+          annualIncome: currentClaimedIncome,
           incomeCeiling: activeScheme?.incomeCeiling,
           courseLevel: applicant.courseLevel,
           instituteName: applicant.instituteName
@@ -97,8 +125,10 @@ export const DynamicApplicationForm: React.FC<DynamicApplicationFormProps> = ({
           ...prev.filter(d => d.docType !== docType),
           {
             docType,
-            fileName: sampleFileName,
+            fileName,
+            fileUrl: fileUrl || '/uploads/sample.pdf',
             status: resp.verification.hasDiscrepancy ? 'DEFICIENCY_FLAGGED' : 'OCR_VERIFIED',
+            ocrExtracted: resp.extracted,
             extracted: resp.extracted,
             discrepancyNote: resp.verification.explainableDeficiencyReason
           }
@@ -107,8 +137,28 @@ export const DynamicApplicationForm: React.FC<DynamicApplicationFormProps> = ({
     } catch (err: any) {
       console.error('OCR Extraction error:', err);
     } finally {
-      setOcrLoading(false);
+      setUploadingDocType(null);
     }
+  };
+
+  // Real File Upload handler
+  const handleRealFileUpload = (docType: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const base64Data = dataUrl.split(',')[1];
+      handleProcessDocument(docType, file.name, base64Data, file.type || 'application/pdf', dataUrl);
+    };
+    reader.readAsDataURL(file);
+    // Reset file input value so re-selecting works
+    e.target.value = '';
+  };
+
+  const handleRemoveDoc = (docType: string) => {
+    setUploadedDocs(prev => prev.filter(d => d.docType !== docType));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -334,46 +384,102 @@ export const DynamicApplicationForm: React.FC<DynamicApplicationFormProps> = ({
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
               {activeScheme?.documentChecklist.map((doc) => {
                 const uploaded = uploadedDocs.find(d => d.docType === doc.docType);
+                const isScanning = uploadingDocType === doc.docType;
+
                 return (
                   <div key={doc.docType} style={{
+                    padding: '0.75rem 0.875rem',
+                    borderRadius: '6px',
+                    backgroundColor: uploaded?.status === 'DEFICIENCY_FLAGGED' ? '#FFF5F5' : uploaded ? '#F0FDF4' : '#FFFFFF',
+                    border: `1px solid ${uploaded?.status === 'DEFICIENCY_FLAGGED' ? '#FECACA' : uploaded ? '#BBF7D0' : '#E2E8F0'}`,
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '0.65rem 0.875rem',
-                    borderRadius: '4px',
-                    backgroundColor: uploaded ? '#F0FDF4' : '#FFFFFF',
-                    border: `1px solid ${uploaded ? '#BBF7D0' : '#E2E8F0'}`
+                    flexDirection: 'column',
+                    gap: '0.5rem'
                   }}>
-                    <div>
-                      <div style={{ fontSize: '0.8125rem', fontWeight: 500, color: '#1A1A1A' }}>
-                        {doc.title} {doc.required && <span style={{ color: '#C82333' }}>*</span>}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <div>
+                        <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#0A2540', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <FileText size={14} style={{ color: '#1A4D8F' }} />
+                          {doc.title} {doc.required && <span style={{ color: '#C82333' }}>*</span>}
+                        </div>
+                        <div style={{ fontSize: '0.6875rem', color: '#64748B', marginTop: '0.1rem' }}>
+                          Code: {doc.docType} {uploaded && `• Attached: ${uploaded.fileName}`}
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.6875rem', color: '#718096' }}>
-                        Type: {doc.docType} {uploaded && `• Source: ${uploaded.status === 'DIGILOCKER_VERIFIED' ? 'DigiLocker Digital Locker' : uploaded.fileName}`}
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {uploaded ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span className={`badge ${uploaded.status === 'DEFICIENCY_FLAGGED' ? 'badge-rejected' : 'badge-approved'}`} style={{ fontSize: '0.6875rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              {uploaded.status === 'DEFICIENCY_FLAGGED' ? <AlertTriangle size={12} /> : <CheckCircle size={12} />}
+                              {uploaded.status === 'DEFICIENCY_FLAGGED' ? 'Deficiency Flagged' : uploaded.status === 'DIGILOCKER_VERIFIED' ? 'DigiLocker Verified' : 'AI Verified'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDoc(doc.docType)}
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: '0.25rem 0.45rem', color: '#A61C1C' }}
+                              title="Remove document"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        ) : isScanning ? (
+                          <span style={{ fontSize: '0.75rem', color: '#1A4D8F', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }}>
+                            <RefreshCw size={13} className="animate-spin" /> AI Extracting & Verifying...
+                          </span>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            {/* Real File Upload Input */}
+                            <label
+                              className="btn btn-primary btn-sm"
+                              style={{
+                                fontSize: '0.75rem',
+                                padding: '0.3rem 0.65rem',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                margin: 0
+                              }}
+                            >
+                              <Upload size={12} />
+                              <span>Upload File</span>
+                              <input
+                                type="file"
+                                accept=".pdf,.png,.jpg,.jpeg"
+                                onChange={(e) => handleRealFileUpload(doc.docType, e)}
+                                style={{ display: 'none' }}
+                              />
+                            </label>
+
+                            {/* Quick Sample Selector for Convenience */}
+                            <button
+                              type="button"
+                              onClick={() => handleProcessDocument(
+                                doc.docType,
+                                `${applicant.name.toLowerCase().split(' ')[0]}_${doc.docType.toLowerCase()}_sample.pdf`
+                              )}
+                              className="btn btn-secondary btn-sm"
+                              style={{ fontSize: '0.6875rem', padding: '0.3rem 0.5rem', color: '#4A5568' }}
+                              title="Use pre-verified sample for instant demo"
+                            >
+                              <Sparkles size={11} style={{ color: '#E06D14' }} /> Sample
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    <div>
-                      {uploaded ? (
-                        <span className="badge badge-approved" style={{ fontSize: '0.6875rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <CheckCircle size={12} /> {uploaded.status === 'DIGILOCKER_VERIFIED' ? 'DigiLocker Verified' : 'AI Verified'}
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleSimulateAiOcr(doc.docType, `${applicant.name.toLowerCase().split(' ')[0]}_${doc.docType.toLowerCase()}.pdf`)}
-                          className="btn btn-secondary btn-sm"
-                          disabled={ocrLoading}
-                          style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}
-                        >
-                          <Sparkles size={12} style={{ color: '#1A4D8F' }} />
-                          {ocrLoading ? 'Scanning...' : 'Test AI Upload'}
-                        </button>
-                      )}
-                    </div>
+                    {/* Discrepancy Note Preview if flagged */}
+                    {uploaded?.discrepancyNote && (
+                      <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '4px', padding: '0.45rem 0.65rem', fontSize: '0.75rem', color: '#991B1B' }}>
+                        <strong>Deficiency Detected:</strong> {uploaded.discrepancyNote}
+                      </div>
+                    )}
                   </div>
                 );
               })}

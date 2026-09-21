@@ -119,7 +119,7 @@ export const api = {
       body: JSON.stringify(payload)
     });
   },
-  resubmitDeficiency: async (id: string, payload: { explanation: string }) => {
+  resubmitDeficiency: async (id: string, payload: { explanation: string; newDocuments?: any[] }) => {
     return safeFetch(`/applications/${id}/resubmit`, {
       method: 'POST',
       headers: getHeaders(),
@@ -133,6 +133,15 @@ export const api = {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload)
+    });
+  },
+
+  // Document status review
+  updateDocumentStatus: async (docId: string, status: string, notes?: string) => {
+    return safeFetch(`/documents/${docId}/status`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify({ status, notes })
     });
   },
 

@@ -284,6 +284,9 @@ export const App: React.FC = () => {
 
   const handleApplyFromSimulator = (schemeCode: string) => {
     setDefaultApplySchemeCode(schemeCode);
+    if (!currentUser) {
+      handleSwitchPersona('applicant-pooja');
+    }
     setIsApplyModalOpen(true);
   };
 

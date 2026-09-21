@@ -53,13 +53,14 @@ export class AiDocumentService {
     docType: string,
     fileName: string,
     base64Data?: string,
-    mimeType?: string
+    mimeType?: string,
+    formData?: any
   ): Promise<ExtractedDocumentData> {
     const client = this.getClient();
 
     if (client && base64Data && mimeType) {
       try {
-        const model = client.getGenerativeModel({ model: 'gemini-3.6-flash' });
+        const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' });
         const prompt = `
           You are a specialized Government of India Document Intelligence Verifier for the Ministry of Tribal Affairs (MoTA).
           Analyze the uploaded certificate/document image for an ST scholarship application.
@@ -106,7 +107,7 @@ export class AiDocumentService {
     }
 
     // High-fidelity fallback parser for hackathon demonstration reliability
-    return this.fallbackSimulatedExtraction(docType, fileName);
+    return this.fallbackSimulatedExtraction(docType, fileName, formData);
   }
 
   /**
@@ -188,32 +189,39 @@ export class AiDocumentService {
   /**
    * High-accuracy offline sample document parser for SIH evaluation
    */
-  private static fallbackSimulatedExtraction(docType: string, fileName: string): ExtractedDocumentData {
+  private static fallbackSimulatedExtraction(docType: string, fileName: string, formData?: any): ExtractedDocumentData {
     const fn = fileName.toLowerCase();
+    const candidateName = formData?.candidateName ||
+      (fn.includes('amitabh') ? 'Amitabh Gond' :
+       fn.includes('sunita') ? 'Sunita Soren' :
+       fn.includes('ramesh') ? 'Ramesh Kumar Oraon' :
+       fn.includes('kailash') ? 'Kailash Birhor' : 'Pooja Maravi');
 
     if (docType === 'INCOME_CERT' || fn.includes('income')) {
-      // Check if this is the intentionally seeded discrepancy scenario for demonstration
-      const isAmitabhDiscrepancy = fn.includes('amitabh') || fn.includes('discrepancy');
+      const isAmitabhDiscrepancy = fn.includes('amitabh') || fn.includes('discrepancy') || (formData?.annualIncome === 240000 && candidateName === 'Amitabh Gond');
+      const annualIncome = isAmitabhDiscrepancy ? 280000 : (formData?.annualIncome || 140000);
+
       return {
         documentType: 'INCOME_CERT',
-        candidateName: isAmitabhDiscrepancy ? 'Amitabh Gond' : 'Pooja Maravi',
-        annualIncome: isAmitabhDiscrepancy ? 280000 : 140000,
+        candidateName,
+        annualIncome,
         issueDate: '2026-04-10',
         issuingAuthority: 'Office of the Tehsildar & Executive Magistrate',
-        certificateNumber: 'INC/2026/MP/99120',
+        certificateNumber: `INC/2026/${Math.random().toString(36).substring(2, 6).toUpperCase()}/99120`,
         rawConfidence: 97.4,
         extractionMethod: 'HEURISTIC_PARSER_FALLBACK'
       };
     }
 
     if (docType === 'CASTE_CERT' || fn.includes('caste')) {
+      const isBaiga = candidateName === 'Pooja Maravi';
       return {
         documentType: 'CASTE_CERT',
-        candidateName: 'Pooja Maravi',
-        casteCategory: 'Baiga (Particularly Vulnerable Tribal Group)',
+        candidateName,
+        casteCategory: isBaiga ? 'Baiga (Particularly Vulnerable Tribal Group)' : 'Scheduled Tribe (ST)',
         issueDate: '2022-06-18',
         issuingAuthority: 'Sub-Divisional Officer (Civil), Revenue Division',
-        certificateNumber: 'ST-PVTG/2022/DND/4011',
+        certificateNumber: `ST-PVTG/2022/${Math.random().toString(36).substring(2, 6).toUpperCase()}/4011`,
         rawConfidence: 98.8,
         extractionMethod: 'HEURISTIC_PARSER_FALLBACK'
       };
@@ -222,8 +230,8 @@ export class AiDocumentService {
     if (docType === 'OVERSEAS_OFFER' || fn.includes('oxford') || fn.includes('offer')) {
       return {
         documentType: 'OVERSEAS_OFFER',
-        candidateName: 'Sunita Soren',
-        instituteName: 'University of Oxford',
+        candidateName: candidateName || 'Sunita Soren',
+        instituteName: formData?.foreignUniversity || 'University of Oxford',
         marksPercentage: 78.0,
         issueDate: '2026-03-01',
         issuingAuthority: 'Faculty of Earth & Environmental Sciences, Oxford',
@@ -233,9 +241,21 @@ export class AiDocumentService {
       };
     }
 
+    if (docType === 'PWD_CERT' || fn.includes('pwd') || fn.includes('disability')) {
+      return {
+        documentType: 'PWD_CERT',
+        candidateName,
+        certificateNumber: 'UDID-JH-08-2021-99812',
+        issueDate: '2021-08-30',
+        issuingAuthority: 'District Medical Board, Sadar Hospital',
+        rawConfidence: 99.2,
+        extractionMethod: 'HEURISTIC_PARSER_FALLBACK'
+      };
+    }
+
     return {
       documentType: docType,
-      candidateName: 'Verified Candidate',
+      candidateName,
       rawConfidence: 95.0,
       issueDate: '2026-01-15',
       issuingAuthority: 'Competent Authority',

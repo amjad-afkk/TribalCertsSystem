@@ -4,9 +4,9 @@ import type { ApplicationItem } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
 import {
   ShieldCheck, AlertTriangle, CheckCircle,
-  RefreshCw, Eye, X, QrCode
+  RefreshCw, Eye, X, FileSearch
 } from 'lucide-react';
-import { QrVerificationModal } from '../common/QrVerificationModal';
+import { DocumentVerificationModal } from '../common/DocumentVerificationModal';
 
 interface VerificationQueueProps {
   currentRole: string;
@@ -25,8 +25,8 @@ export const VerificationQueue: React.FC<VerificationQueueProps> = ({ currentRol
   const [submittingAction, setSubmittingAction] = useState(false);
 
   const activeTier =
-    currentRole === 'state-nodal' ? 'STATE_NODAL' :
-    currentRole === 'mota-admin' ? 'MOTA_ADMIN' : 'INO';
+    currentRole === 'state-nodal' || currentRole === 'STATE_NODAL' ? 'STATE_NODAL' :
+    currentRole === 'mota-admin' || currentRole === 'MOTA_ADMIN' ? 'MOTA_ADMIN' : 'INO';
 
   const loadQueue = async () => {
     setLoading(true);
@@ -299,9 +299,9 @@ export const VerificationQueue: React.FC<VerificationQueueProps> = ({ currentRol
                               onClick={() => setQrModalDoc(doc)}
                               className="btn btn-secondary btn-sm"
                               style={{ fontSize: '0.6875rem', padding: '0.2rem 0.45rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                              title="Verify Cryptographic QR Code and PKI Signature"
+                              title="Inspect Government Certificate & AI Verification Details"
                             >
-                              <QrCode size={12} /> Verify QR
+                              <FileSearch size={12} /> Inspect & Verify Document
                             </button>
                             <StatusBadge status={doc.status} />
                           </div>
@@ -314,8 +314,8 @@ export const VerificationQueue: React.FC<VerificationQueueProps> = ({ currentRol
                           <div style={{ marginTop: '0.35rem', backgroundColor: '#F8FAFC', padding: '0.4rem', borderRadius: '3px', color: '#334155' }}>
                             Extracted Name: <strong>{doc.ocrExtracted.candidateName || 'N/A'}</strong> |
                             Authority: <strong>{doc.ocrExtracted.issuingAuthority || 'Verified'}</strong>
-                            {doc.ocrExtracted.annualIncomeInr && (
-                              <span> | Income: <strong>₹{doc.ocrExtracted.annualIncomeInr.toLocaleString('en-IN')}</strong></span>
+                            {(doc.ocrExtracted.annualIncome != null || doc.ocrExtracted.annualIncomeInr != null) && (
+                              <span> | Income: <strong>₹{(doc.ocrExtracted.annualIncome ?? doc.ocrExtracted.annualIncomeInr).toLocaleString('en-IN')}</strong></span>
                             )}
                           </div>
                         )}
@@ -399,10 +399,28 @@ export const VerificationQueue: React.FC<VerificationQueueProps> = ({ currentRol
         )}
       </div>
 
-      <QrVerificationModal
+      <DocumentVerificationModal
         isOpen={!!qrModalDoc}
         onClose={() => setQrModalDoc(null)}
         documentTitle={qrModalDoc?.fileName || qrModalDoc?.docType || 'Income & Caste Certificate'}
+        document={qrModalDoc}
+        applicant={selectedApp?.applicant}
+        scheme={selectedApp?.scheme}
+        applicationId={selectedApp?.id}
+        onUpdateStatus={(newStatus) => {
+          if (qrModalDoc) {
+            setQrModalDoc({ ...qrModalDoc, status: newStatus });
+          }
+          if (selectedApp) {
+            setSelectedApp({
+              ...selectedApp,
+              documents: selectedApp.documents.map((d: any) =>
+                d.id === qrModalDoc?.id ? { ...d, status: newStatus } : d
+              )
+            });
+          }
+          loadQueue();
+        }}
       />
     </div>
   );

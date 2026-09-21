@@ -7,7 +7,7 @@ import {
   submitApplication,
   resubmitDeficiency
 } from '../controllers/applicationController.js';
-import { reviewApplication } from '../controllers/verificationController.js';
+import { reviewApplication, reviewDocument } from '../controllers/verificationController.js';
 import { extractAndVerifyDocument } from '../controllers/documentController.js';
 import { chatWithGemini } from '../controllers/chatbotController.js';
 import {
@@ -71,6 +71,7 @@ router.post('/applications/:id/resubmit', resubmitDeficiency);
 
 // Verification & Scrutiny (Restricted to Nodal & Ministry Officers)
 router.post('/applications/:id/review', requireRoles(['INO', 'STATE_NODAL', 'MOTA_ADMIN']), reviewApplication);
+router.patch('/documents/:docId/status', requireRoles(['INO', 'STATE_NODAL', 'MOTA_ADMIN']), reviewDocument);
 
 // AI Document OCR & Verification
 router.post('/documents/extract', extractAndVerifyDocument);

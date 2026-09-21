@@ -30,7 +30,7 @@ export function runSeed(db = getDb()) {
       reservationWaterfall: JSON.stringify([]),
       documentChecklist: JSON.stringify([
         { docType: 'CASTE_CERT', title: 'Valid ST Community Certificate', required: true },
-        { docType: 'INCOME_CERT', title: 'Competent Authority Income Certificate (â‰¤ â‚¹2.5L)', required: true },
+        { docType: 'INCOME_CERT', title: 'Competent Authority Income Certificate (≤ ₹2.5L)', required: true },
         { docType: 'PREV_MARKSHEET', title: 'Previous Class Marksheet', required: true },
         { docType: 'BANK_PASSBOOK', title: 'Aadhaar-Seeded Bank Passbook / Mandate', required: true }
       ]),
@@ -54,7 +54,7 @@ export function runSeed(db = getDb()) {
       reservationWaterfall: JSON.stringify([]),
       documentChecklist: JSON.stringify([
         { docType: 'CASTE_CERT', title: 'Valid ST Community Certificate', required: true },
-        { docType: 'INCOME_CERT', title: 'Annual Income Certificate (â‰¤ â‚¹2.5L)', required: true },
+        { docType: 'INCOME_CERT', title: 'Annual Income Certificate (≤ ₹2.5L)', required: true },
         { docType: 'FEE_RECEIPT', title: 'Current Year Admission / Fee Receipt', required: true },
         { docType: 'PREV_MARKSHEET', title: 'Last Qualifying Examination Marksheet', required: true },
         { docType: 'BANK_PASSBOOK', title: 'Aadhaar-Seeded Bank Account Passbook', required: true }
@@ -79,7 +79,7 @@ export function runSeed(db = getDb()) {
       reservationWaterfall: JSON.stringify([]),
       documentChecklist: JSON.stringify([
         { docType: 'CASTE_CERT', title: 'Valid ST Certificate', required: true },
-        { docType: 'INCOME_CERT', title: 'Income Certificate (â‰¤ â‚¹6.0L)', required: true },
+        { docType: 'INCOME_CERT', title: 'Income Certificate (≤ ₹6.0L)', required: true },
         { docType: 'ALLOTMENT_LETTER', title: 'Admission / Seat Allotment Letter in Notified Institute', required: true },
         { docType: 'FEE_STRUCTURE', title: 'Institute Verified Fee Structure Breakdown', required: true },
         { docType: 'BANK_PASSBOOK', title: 'Student Bank Account Details', required: true }
@@ -102,7 +102,7 @@ export function runSeed(db = getDb()) {
       totalSlots: 750,
       selectionMethod: 'MERIT_WATERFALL',
       reservationWaterfall: JSON.stringify([
-        { tier: 'DIVYANGJAN', label: 'Divyangjan (PwD â‰¥ 40%)', priority: 1, allocatedSlots: 38, spilloverTargetTier: 'PVTG' },
+        { tier: 'DIVYANGJAN', label: 'Divyangjan (PwD ≥ 40%)', priority: 1, allocatedSlots: 38, spilloverTargetTier: 'PVTG' },
         { tier: 'PVTG', label: 'Particularly Vulnerable Tribal Groups (PVTG)', priority: 2, allocatedSlots: 75, spilloverTargetTier: 'FEMALE_ST' },
         { tier: 'FEMALE_ST', label: 'Female ST Candidates (30% Sub-quota)', priority: 3, allocatedSlots: 225, spilloverTargetTier: 'ST_GENERAL' },
         { tier: 'ST_GENERAL', label: 'Open Scheduled Tribe (ST Others)', priority: 4, allocatedSlots: 412, spilloverTargetTier: null }
@@ -122,7 +122,7 @@ export function runSeed(db = getDb()) {
       id: 'scheme-nos',
       code: 'AZKMI',
       name: 'National Overseas Scholarship for ST Candidates (NOS)',
-      level: 'Masterâ€™s / Ph.D / Post-Doctoral Abroad',
+      level: "Master's / Ph.D / Post-Doctoral Abroad",
       description: 'Prestigious scholarship for 20 ST scholars to pursue overseas education in QS World Ranked top universities.',
       legacyPortal: 'overseas.tribal.gov.in',
       incomeCeiling: 600000,
@@ -138,7 +138,7 @@ export function runSeed(db = getDb()) {
       ]),
       documentChecklist: JSON.stringify([
         { docType: 'CASTE_CERT', title: 'Valid ST Certificate', required: true },
-        { docType: 'INCOME_CERT', title: 'Family Income Certificate (â‰¤ â‚¹6.0L)', required: true },
+        { docType: 'INCOME_CERT', title: 'Family Income Certificate (≤ ₹6.0L)', required: true },
         { docType: 'OVERSEAS_OFFER', title: 'Unconditional Admission Letter from Foreign University', required: true },
         { docType: 'PASSPORT', title: 'Valid Indian Passport', required: true },
         { docType: 'GRE_IELTS_SCORE', title: 'Standardized Exam Scorecard (IELTS/TOEFL/GRE)', required: true }
@@ -231,7 +231,7 @@ export function runSeed(db = getDb()) {
       annualIncome: 240000,
       state: 'Jharkhand',
       district: 'Ranchi',
-      instituteName: 'St. Xavierâ€™s College, Ranchi',
+      instituteName: "St. Xavier's College, Ranchi",
       courseLevel: 'Class XII (Science)',
       academicPercentage: 81.2,
       bankAccountHash: 'bank_hash_pnb_9182'
@@ -422,6 +422,7 @@ export function runSeed(db = getDb()) {
   `);
 
   const documents = [
+    // Application 1 (Pooja Maravi - NFST)
     {
       id: 'doc-01-caste',
       applicationId: 'appln-nfst-01',
@@ -430,10 +431,166 @@ export function runSeed(db = getDb()) {
       fileUrl: '/uploads/sample_caste_cert.pdf',
       ocrExtracted: JSON.stringify({
         candidateName: 'Pooja Maravi',
+        fatherName: 'Late Sh. Ramu Maravi',
         casteCategory: 'Baiga (Particularly Vulnerable Tribal Group)',
+        certificateNumber: 'ST-PVTG-2022-DND-4011',
         issueDate: '2022-06-18',
-        issuingAuthority: 'Sub-Divisional Officer (Civil), Revenue Division',
-        rawConfidence: 98.8
+        issuingAuthority: 'Sub-Divisional Officer (Civil), Revenue Division, Dindori, MP',
+        rawConfidence: 98.8,
+        extractionMethod: 'GEMINI_MULTIMODAL_API'
+      }),
+      status: 'ACCEPTED',
+      discrepancyNote: null
+    },
+    {
+      id: 'doc-01-income',
+      applicationId: 'appln-nfst-01',
+      docType: 'INCOME_CERT',
+      fileName: 'pooja_income_certificate_2026.pdf',
+      fileUrl: '/uploads/sample_income_cert.pdf',
+      ocrExtracted: JSON.stringify({
+        candidateName: 'Pooja Maravi',
+        fatherName: 'Late Sh. Ramu Maravi',
+        annualIncome: 140000,
+        certificateNumber: 'INC-2026-DND-88192',
+        issueDate: '2026-04-15',
+        issuingAuthority: 'Office of the Tehsildar & Executive Magistrate, Dindori, MP',
+        rawConfidence: 99.1,
+        extractionMethod: 'GEMINI_MULTIMODAL_API'
+      }),
+      status: 'ACCEPTED',
+      discrepancyNote: null
+    },
+
+    // Application 2 (Ramesh Kumar Oraon - Post-Matric)
+    {
+      id: 'doc-02-caste',
+      applicationId: 'appln-postmatric-02',
+      docType: 'CASTE_CERT',
+      fileName: 'ramesh_oraon_caste_cert.pdf',
+      fileUrl: '/uploads/sample_caste_cert.pdf',
+      ocrExtracted: JSON.stringify({
+        candidateName: 'Ramesh Kumar Oraon',
+        casteCategory: 'Oraon (Scheduled Tribe)',
+        certificateNumber: 'JH-CST-2021-RNC-5509',
+        issueDate: '2021-09-05',
+        issuingAuthority: 'Circle Officer, Kanke Circle, Ranchi, Jharkhand',
+        rawConfidence: 98.2,
+        extractionMethod: 'GEMINI_MULTIMODAL_API'
+      }),
+      status: 'ACCEPTED',
+      discrepancyNote: null
+    },
+    {
+      id: 'doc-02-income',
+      applicationId: 'appln-postmatric-02',
+      docType: 'INCOME_CERT',
+      fileName: 'ramesh_income_cert.pdf',
+      fileUrl: '/uploads/sample_income_cert.pdf',
+      ocrExtracted: JSON.stringify({
+        candidateName: 'Ramesh Kumar Oraon',
+        annualIncome: 240000,
+        certificateNumber: 'JH-INC-2026-RNC-1284',
+        issueDate: '2026-03-22',
+        issuingAuthority: 'Circle Officer, Ranchi, Jharkhand',
+        rawConfidence: 97.9,
+        extractionMethod: 'GEMINI_MULTIMODAL_API'
+      }),
+      status: 'ACCEPTED',
+      discrepancyNote: null
+    },
+
+    // Application 3 (Sunita Soren - NOS Overseas)
+    {
+      id: 'doc-03-offer',
+      applicationId: 'appln-nos-03',
+      docType: 'OVERSEAS_OFFER',
+      fileName: 'oxford_unconditional_admit_soren.pdf',
+      fileUrl: '/uploads/sample_offer_letter.pdf',
+      ocrExtracted: JSON.stringify({
+        candidateName: 'Sunita Soren',
+        instituteName: 'University of Oxford',
+        courseLevel: 'M.Sc in Environmental Change and Management',
+        certificateNumber: 'OX-ADM-2026-9812',
+        issueDate: '2026-05-18',
+        issuingAuthority: 'Graduate Admissions Committee, University of Oxford, UK',
+        rawConfidence: 99.4,
+        extractionMethod: 'GEMINI_MULTIMODAL_API'
+      }),
+      status: 'ACCEPTED',
+      discrepancyNote: null
+    },
+    {
+      id: 'doc-03-caste',
+      applicationId: 'appln-nos-03',
+      docType: 'CASTE_CERT',
+      fileName: 'sunita_santhal_caste_cert.pdf',
+      fileUrl: '/uploads/sample_caste_cert.pdf',
+      ocrExtracted: JSON.stringify({
+        candidateName: 'Sunita Soren',
+        casteCategory: 'Santhal (Scheduled Tribe)',
+        certificateNumber: 'OD-CST-2020-MBJ-7834',
+        issueDate: '2020-11-14',
+        issuingAuthority: 'Sub-Collector & Revenue Magistrate, Mayurbhanj, Odisha',
+        rawConfidence: 98.7,
+        extractionMethod: 'GEMINI_MULTIMODAL_API'
+      }),
+      status: 'ACCEPTED',
+      discrepancyNote: null
+    },
+
+    // Application 4 (Kailash Birhor - NFST PwD)
+    {
+      id: 'doc-04-caste',
+      applicationId: 'appln-nfst-04',
+      docType: 'CASTE_CERT',
+      fileName: 'kailash_birhor_pvtg_cert.pdf',
+      fileUrl: '/uploads/sample_caste_cert.pdf',
+      ocrExtracted: JSON.stringify({
+        candidateName: 'Kailash Birhor',
+        casteCategory: 'Birhor (Particularly Vulnerable Tribal Group)',
+        certificateNumber: 'JH-CST-2022-HZB-3912',
+        issueDate: '2022-07-19',
+        issuingAuthority: 'Sub-Divisional Magistrate, Hazaribagh, Jharkhand',
+        rawConfidence: 98.0,
+        extractionMethod: 'GEMINI_MULTIMODAL_API'
+      }),
+      status: 'ACCEPTED',
+      discrepancyNote: null
+    },
+    {
+      id: 'doc-04-pwd',
+      applicationId: 'appln-nfst-04',
+      docType: 'PWD_CERT',
+      fileName: 'kailash_disability_card.pdf',
+      fileUrl: '/uploads/sample_pwd_cert.pdf',
+      ocrExtracted: JSON.stringify({
+        candidateName: 'Kailash Birhor',
+        certificateNumber: 'UDID-JH-08-2021-99812',
+        issueDate: '2021-08-30',
+        issuingAuthority: 'District Medical Board, Hazaribagh Sadar Hospital',
+        rawConfidence: 99.2,
+        extractionMethod: 'GEMINI_MULTIMODAL_API'
+      }),
+      status: 'ACCEPTED',
+      discrepancyNote: null
+    },
+
+    // Application 5 (Amitabh Gond - Post-Matric Deficiency Demonstration)
+    {
+      id: 'doc-05-caste',
+      applicationId: 'appln-postmatric-05',
+      docType: 'CASTE_CERT',
+      fileName: 'amitabh_gond_caste_certificate.pdf',
+      fileUrl: '/uploads/sample_caste_cert.pdf',
+      ocrExtracted: JSON.stringify({
+        candidateName: 'Amitabh Gond',
+        casteCategory: 'Gond (Scheduled Tribe)',
+        certificateNumber: 'CG-CST-2021-BST-1109',
+        issueDate: '2021-08-12',
+        issuingAuthority: 'Sub-Divisional Magistrate, Bastar, Chhattisgarh',
+        rawConfidence: 98.5,
+        extractionMethod: 'GEMINI_MULTIMODAL_API'
       }),
       status: 'ACCEPTED',
       discrepancyNote: null
@@ -447,9 +604,11 @@ export function runSeed(db = getDb()) {
       ocrExtracted: JSON.stringify({
         candidateName: 'Amitabh Gond',
         annualIncome: 280000,
+        certificateNumber: 'CG-INC-2026-BST-9941',
         issueDate: '2026-04-10',
-        issuingAuthority: 'Office of the Tehsildar & Executive Magistrate',
-        rawConfidence: 97.4
+        issuingAuthority: 'Office of the Tehsildar & Executive Magistrate, Jagdalpur, Bastar',
+        rawConfidence: 97.4,
+        extractionMethod: 'GEMINI_MULTIMODAL_API'
       }),
       status: 'DEFICIENCY_FLAGGED',
       discrepancyNote: 'Extracted income ₹2,80,000 conflicts with form value ₹2,40,000 and exceeds the maximum permissible limit of ₹2,50,000 for Post-Matric.'

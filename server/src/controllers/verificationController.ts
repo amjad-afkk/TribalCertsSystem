@@ -70,6 +70,21 @@ export const reviewApplication = (req: AuthenticatedRequest, res: Response) => {
       WHERE id = ?
     `).run(nextStatus, nextStage, explainableStatus, deficiencyReason, appId);
 
+    // Update document statuses to reflect scrutiny outcome
+    if (action === 'APPROVED') {
+      db.prepare(`
+        UPDATE documents
+        SET status = 'ACCEPTED'
+        WHERE application_id = ? AND status != 'REJECTED'
+      `).run(appId);
+    } else if (action === 'REJECTED') {
+      db.prepare(`
+        UPDATE documents
+        SET status = 'REJECTED'
+        WHERE application_id = ?
+      `).run(appId);
+    }
+
     // Insert verification stage record
     const stageId = uid('vstage');
     db.prepare(`
@@ -106,6 +121,29 @@ export const reviewApplication = (req: AuthenticatedRequest, res: Response) => {
       newStage: nextStage,
       explainableStatus
     });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+export const reviewDocument = (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const db = getDb();
+    const docId = req.params.docId;
+    const { status, discrepancyNote } = req.body;
+
+    const doc = db.prepare('SELECT * FROM documents WHERE id = ?').get(docId) as any;
+    if (!doc) {
+      return res.status(404).json({ success: false, message: 'Document not found' });
+    }
+
+    db.prepare(`
+      UPDATE documents
+      SET status = ?, discrepancy_note = ?
+      WHERE id = ?
+    `).run(status || 'ACCEPTED', discrepancyNote || null, docId);
+
+    res.json({ success: true, message: `Document status updated to ${status}` });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

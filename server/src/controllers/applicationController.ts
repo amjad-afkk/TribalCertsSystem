@@ -215,13 +215,14 @@ export const submitApplication = (req: Request, res: Response) => {
       `);
 
       for (const d of documents) {
+        const ocrData = d.ocrExtracted || d.extracted;
         docInsert.run(
-          `doc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          uid('doc'),
           appId,
           d.docType,
           d.fileName,
           d.fileUrl || '/uploads/sample.pdf',
-          d.ocrExtracted ? JSON.stringify(d.ocrExtracted) : null,
+          ocrData ? JSON.stringify(ocrData) : null,
           d.status || 'OCR_VERIFIED',
           d.discrepancyNote || null
         );
@@ -281,6 +282,36 @@ export const resubmitDeficiency = (req: Request, res: Response) => {
       `Applicant resolved deficiency: "${explanation}". Resubmitted for verification priority review.`,
       appId
     );
+
+    // If new replacement documents are provided, save them and resolve previous flagged documents
+    if (Array.isArray(newDocuments) && newDocuments.length > 0) {
+      db.prepare(`
+        UPDATE documents
+        SET status = 'RESOLVED_BY_RESUBMISSION'
+        WHERE application_id = ? AND status = 'DEFICIENCY_FLAGGED'
+      `).run(appId);
+
+      const docInsert = db.prepare(`
+        INSERT INTO documents (
+          id, application_id, doc_type, file_name, file_url,
+          ocr_extracted, status, discrepancy_note
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      for (const d of newDocuments) {
+        const ocrData = d.ocrExtracted || d.extracted;
+        docInsert.run(
+          uid('doc'),
+          appId,
+          d.docType || 'INCOME_CERT',
+          d.fileName || 'updated_document.pdf',
+          d.fileUrl || '/uploads/sample_income_cert.pdf',
+          ocrData ? JSON.stringify(ocrData) : null,
+          d.status || 'RESUBMITTED_FOR_REVIEW',
+          d.discrepancyNote || null
+        );
+      }
+    }
 
     // Audit log
     db.prepare(`

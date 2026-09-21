@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import type { ApplicationItem, Applicant } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
-import { QrVerificationModal } from '../common/QrVerificationModal';
+import { DocumentVerificationModal } from '../common/DocumentVerificationModal';
 import {
   FileText, AlertTriangle, CheckCircle, Clock,
-  PlusCircle, RefreshCw, Send, QrCode
+  PlusCircle, RefreshCw, Send, ShieldCheck, Upload
 } from 'lucide-react';
 
 interface ApplicantPortalProps {
@@ -21,6 +21,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
   const [selectedQrDoc, setSelectedQrDoc] = useState<{ title: string; docUri: string; certNo: string; issuer: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [resubmitText, setResubmitText] = useState('');
+  const [resubmitFiles, setResubmitFiles] = useState<any[]>([]);
   const [resubmitSuccess, setResubmitSuccess] = useState(false);
 
   // Map persona to applicant ID
@@ -62,13 +63,44 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
     setResubmitSuccess(false);
   }, [currentRole]);
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64Data = reader.result as string;
+      setResubmitFiles(prev => [
+        ...prev,
+        {
+          id: `resub-${Date.now()}`,
+          docType: 'Income Certificate (Rectified)',
+          fileName: file.name,
+          mimeType: file.type || 'application/pdf',
+          fileData: base64Data,
+          status: 'PENDING',
+          ocrExtracted: {
+            candidateName: applicant?.name || 'Applicant',
+            issuingAuthority: 'Tehsildar / District Magistrate',
+            annualIncome: applicant?.annualIncome || 140000
+          }
+        }
+      ]);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleResubmit = async (appId: string) => {
-    if (!resubmitText.trim()) return;
+    if (!resubmitText.trim() && resubmitFiles.length === 0) return;
     try {
-      const resp = await api.resubmitDeficiency(appId, { explanation: resubmitText });
+      const resp = await api.resubmitDeficiency(appId, {
+        explanation: resubmitText,
+        newDocuments: resubmitFiles
+      });
       if (resp.success) {
         setResubmitSuccess(true);
         setResubmitText('');
+        setResubmitFiles([]);
         setTimeout(() => {
           setResubmitSuccess(false);
           loadData();
@@ -180,8 +212,8 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
                   className="btn btn-secondary btn-sm"
                   style={{ fontSize: '0.6875rem', padding: '0.35rem 0.65rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', borderColor: '#86EFAC', color: '#166534', backgroundColor: '#F0FDF4' }}
                 >
-                  <QrCode size={12} />
-                  <span>Verify QR Seal</span>
+                  <ShieldCheck size={12} />
+                  <span>Verify Registry Certificate</span>
                 </button>
               </div>
             ))}
@@ -350,7 +382,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
 
                       {resubmitSuccess ? (
                         <div style={{ color: '#166534', backgroundColor: '#DCFCE7', padding: '0.65rem 0.85rem', borderRadius: '4px', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <CheckCircle size={15} /> Clarification submitted to scrutiny officer!
+                          <CheckCircle size={15} /> Clarification and documents submitted to scrutiny officer!
                         </div>
                       ) : (
                         <div>
@@ -362,14 +394,32 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
                             placeholder="Enter clarification or note regarding the uploaded certificate..."
                             style={{ marginBottom: '0.5rem', fontSize: '0.8125rem' }}
                           />
+
+                          <div style={{ marginBottom: '0.65rem', padding: '0.5rem', backgroundColor: '#FEF3C7', borderRadius: '4px', border: '1px dashed #D97706' }}>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#92400E', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <Upload size={13} /> Attach Rectified Certificate / Supporting Proof (PDF or Image):
+                            </label>
+                            <input
+                              type="file"
+                              accept=".pdf,.png,.jpg,.jpeg"
+                              onChange={handleFileUpload}
+                              style={{ fontSize: '0.75rem', marginTop: '0.35rem', width: '100%' }}
+                            />
+                            {resubmitFiles.length > 0 && (
+                              <div style={{ marginTop: '0.35rem', fontSize: '0.75rem', color: '#166534', fontWeight: 500 }}>
+                                ✓ Ready to submit: {resubmitFiles.map(f => f.fileName).join(', ')}
+                              </div>
+                            )}
+                          </div>
+
                           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                             <button
                               onClick={() => handleResubmit(app.id)}
                               className="btn btn-primary btn-sm"
-                              disabled={!resubmitText.trim()}
+                              disabled={!resubmitText.trim() && resubmitFiles.length === 0}
                               style={{ fontSize: '0.75rem' }}
                             >
-                              <Send size={13} /> Submit Clarification
+                              <Send size={13} /> Submit Clarification & Documents
                             </button>
                           </div>
                         </div>
@@ -383,9 +433,9 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
         )}
       </div>
 
-      {/* QR Code PKI Verification Modal (Section 5.4) */}
+      {/* Statutory e-District Certificate Verification Modal */}
       {selectedQrDoc && (
-        <QrVerificationModal
+        <DocumentVerificationModal
           isOpen={isQrModalOpen}
           onClose={() => setIsQrModalOpen(false)}
           documentTitle={selectedQrDoc.title}
