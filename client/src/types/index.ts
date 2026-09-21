@@ -58,11 +58,13 @@ export interface ApplicationItem {
   schemeName: string;
   schemeCode: string;
   schemeLevel: string;
+  incomeCeiling?: number;
   academicYear: string;
   status: string;
   currentStage: string;
   submittedAt: string | null;
   formData: Record<string, any>;
+  documents?: any[];
   explainableStatus: string;
   deficiencyReason: string | null;
   aiDiscrepancyScore: number;

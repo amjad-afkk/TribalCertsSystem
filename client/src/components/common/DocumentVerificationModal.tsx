@@ -26,6 +26,41 @@ export interface DocumentVerificationModalProps {
   applicantId?: string;
 }
 
+function numberToIndianWords(num: number): string {
+  if (!num || isNaN(num)) return 'Zero Only';
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  const convertLessThanOneThousand = (n: number): string => {
+    if (n === 0) return '';
+    if (n < 20) return a[n] + ' ';
+    const tens = b[Math.floor(n / 10)];
+    const rest = a[n % 10];
+    return tens + (rest ? ' ' + rest : '') + ' ';
+  };
+
+  let words = '';
+  const crore = Math.floor(num / 10000000);
+  num %= 10000000;
+  const lakh = Math.floor(num / 100000);
+  num %= 100000;
+  const thousand = Math.floor(num / 1000);
+  num %= 1000;
+  const hundred = Math.floor(num / 100);
+  const rest = num % 100;
+
+  if (crore > 0) words += convertLessThanOneThousand(crore) + 'Crore ';
+  if (lakh > 0) words += convertLessThanOneThousand(lakh) + 'Lakh ';
+  if (thousand > 0) words += convertLessThanOneThousand(thousand) + 'Thousand ';
+  if (hundred > 0) words += a[hundred] + ' Hundred ';
+  if (rest > 0) {
+    if (words !== '') words += 'and ';
+    words += convertLessThanOneThousand(rest);
+  }
+  return (words.trim() + ' Only');
+}
+
 export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps> = ({
   isOpen,
   onClose,
@@ -43,10 +78,17 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
   applicantName: legacyApplicantName,
   applicantId: legacyApplicantId
 }) => {
+  // Infer statutory document type from title or props
+  const inferredDocType = propDoc?.docType || legacyDocType ||
+    (legacyTitle?.toLowerCase().includes('caste') || legacyTitle?.toLowerCase().includes('tribe') ? 'CASTE_CERT' :
+     legacyTitle?.toLowerCase().includes('income') ? 'INCOME_CERT' :
+     legacyTitle?.toLowerCase().includes('offer') || legacyTitle?.toLowerCase().includes('admit') ? 'OVERSEAS_OFFER' :
+     legacyTitle?.toLowerCase().includes('pwd') || legacyTitle?.toLowerCase().includes('disability') ? 'PWD_CERT' : 'INCOME_CERT');
+
   // Normalize document data whether called from Officer queue or Citizen portal
   const doc = propDoc || {
     id: 'doc-inspect',
-    docType: legacyDocType || 'INCOME_CERT',
+    docType: inferredDocType,
     fileName: legacyTitle || 'submitted_certificate.pdf',
     fileUrl: legacyDocUri || '/uploads/sample_cert.pdf',
     status: 'ACCEPTED',
@@ -70,11 +112,13 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
   };
 
   const ocr = doc.ocrExtracted || {};
-  const docType = doc.docType || legacyDocType || 'INCOME_CERT';
+  const docType = doc.docType || inferredDocType;
 
   // Registry query state
   const initialCertNo = ocr.certificateNumber || legacyCertNum ||
-    (docType === 'INCOME_CERT' ? 'JH-INC-2026-BST-9941' : 'ST-PVTG-2022-DND-4011');
+    (docType === 'INCOME_CERT' ? 'JH-INC-2026-BST-9941' :
+     docType === 'CASTE_CERT' ? 'CG-CST-2021-BST-1109' :
+     docType === 'OVERSEAS_OFFER' ? 'OX-ADM-2026-9812' : 'UDID-JH-08-2021-99812');
   const [certNumber, setCertNumber] = useState(initialCertNo);
   const [searching, setSearching] = useState(false);
   const [verificationResult, setVerificationResult] = useState<any | null>(null);
@@ -138,10 +182,11 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
   // Deficit calculations
   const hasDeficit = doc.status === 'DEFICIENCY_FLAGGED' || Boolean(doc.discrepancyNote);
   const candidateName = ocr.candidateName || applicant.name;
-  const extractedIncome = ocr.annualIncome;
+  const extractedIncome: number | undefined =
+    ocr.annualIncome ?? ocr.annualIncomeInr ?? (docType === 'INCOME_CERT' ? (applicant.annualIncome || 280000) : undefined);
   const claimedIncome = applicant.annualIncome;
   const incomeCeiling = scheme.incomeCeiling;
-  const isIncomeBreached = extractedIncome && incomeCeiling && extractedIncome > incomeCeiling;
+  const isIncomeBreached = extractedIncome !== undefined && incomeCeiling !== undefined && extractedIncome > incomeCeiling;
 
   // State & Issuer display
   const stateName = applicant.state || 'Jharkhand';
@@ -317,13 +362,25 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
                 </div>
 
                 {/* Legal Certification Statement */}
-                <p style={{ fontSize: '0.75rem', lineHeight: 1.6, textAlign: 'justify', margin: '0.875rem 0' }}>
-                  This is to certify that <strong>{candidateName}</strong>, son/daughter of <strong>{ocr.fatherName || 'Late Sh. Ramu Maravi'}</strong>,
-                  resident of District <strong>{districtName}</strong> in the State of <strong>{stateName}</strong>, belongs to the{' '}
-                  <strong>{ocr.casteCategory || applicant.category || 'Scheduled Tribe'}</strong> community, which is recognized as a Scheduled Tribe under the Constitution (Scheduled Tribes) Order.
-                </p>
+                {docType === 'INCOME_CERT' ? (
+                  <p style={{ fontSize: '0.75rem', lineHeight: 1.6, textAlign: 'justify', margin: '0.875rem 0' }}>
+                    This is to certify that according to verified government revenue and tax records, the total combined annual family income of <strong>{candidateName}</strong>, son/daughter of <strong>{ocr.fatherName || 'Late Sh. Ramu Maravi'}</strong>, resident of District <strong>{districtName}</strong> in the State of <strong>{stateName}</strong>, from all sources (agriculture, employment, business, and other holdings) is as certified below:
+                  </p>
+                ) : docType === 'OVERSEAS_OFFER' ? (
+                  <p style={{ fontSize: '0.75rem', lineHeight: 1.6, textAlign: 'justify', margin: '0.875rem 0' }}>
+                    This is to certify that <strong>{candidateName}</strong> has been granted unconditional admission to <strong>{ocr.instituteName || 'University of Oxford'}</strong> for the academic program <strong>{ocr.courseLevel || 'M.Sc in Environmental Change and Management'}</strong>.
+                  </p>
+                ) : docType === 'PWD_CERT' ? (
+                  <p style={{ fontSize: '0.75rem', lineHeight: 1.6, textAlign: 'justify', margin: '0.875rem 0' }}>
+                    This is to certify that <strong>{candidateName}</strong> has been evaluated by the District Medical Board with permanent disability assessed under statutory guidelines.
+                  </p>
+                ) : (
+                  <p style={{ fontSize: '0.75rem', lineHeight: 1.6, textAlign: 'justify', margin: '0.875rem 0' }}>
+                    This is to certify that <strong>{candidateName}</strong>, son/daughter of <strong>{ocr.fatherName || 'Late Sh. Ramu Maravi'}</strong>, resident of District <strong>{districtName}</strong> in the State of <strong>{stateName}</strong>, belongs to the <strong>{ocr.casteCategory || applicant.category || 'Scheduled Tribe'}</strong> community, which is recognized as a Scheduled Tribe under the Constitution (Scheduled Tribes) Order.
+                  </p>
+                )}
 
-                {docType === 'INCOME_CERT' && (
+                {docType === 'INCOME_CERT' && extractedIncome !== undefined && (
                   <div style={{
                     backgroundColor: isIncomeBreached ? '#FEF2F2' : '#F0FDF4',
                     border: `1px solid ${isIncomeBreached ? '#FCA5A5' : '#86EFAC'}`,
@@ -333,11 +390,11 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: '#475569' }}>Certified Annual Family Income:</span>
                       <strong style={{ fontSize: '0.875rem', color: isIncomeBreached ? '#991B1B' : '#166534' }}>
-                        ₹{Number(extractedIncome || 140000).toLocaleString('en-IN')}
+                        ₹{extractedIncome.toLocaleString('en-IN')}
                       </strong>
                     </div>
                     <div style={{ fontSize: '0.6875rem', color: '#64748B', marginTop: '0.2rem' }}>
-                      (Rupees {Number(extractedIncome || 140000) === 280000 ? 'Two Lakh Eighty Thousand Only' : 'One Lakh Forty Thousand Only'})
+                      (Rupees {numberToIndianWords(extractedIncome)})
                     </div>
                   </div>
                 )}
@@ -429,7 +486,9 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
                   }}>
                     <strong style={{ color: '#0A2540' }}>Annual Income</strong>
                     <span style={{ color: '#475569' }}>₹{claimedIncome ? claimedIncome.toLocaleString('en-IN') : 'N/A'}</span>
-                    <span style={{ color: '#DC2626', fontWeight: 700 }}>₹{extractedIncome ? extractedIncome.toLocaleString('en-IN') : '2,80,000'}</span>
+                    <span style={{ color: isIncomeBreached ? '#DC2626' : '#166534', fontWeight: 700 }}>
+                      ₹{extractedIncome !== undefined ? extractedIncome.toLocaleString('en-IN') : 'N/A'}
+                    </span>
                     <span style={{ color: '#166534', fontWeight: 600 }}>₹{incomeCeiling ? incomeCeiling.toLocaleString('en-IN') : 'No Cap'}</span>
                   </div>
                 </div>

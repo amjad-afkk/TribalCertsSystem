@@ -12,6 +12,7 @@ export const getApplications = (req: Request, res: Response) => {
     let query = `
       SELECT a.*,
              s.name as scheme_name, s.code as scheme_code, s.level as scheme_level,
+             s.income_ceiling,
              ap.name as applicant_name, ap.category as applicant_category,
              ap.aadhaar_masked, ap.state as applicant_state, ap.institute_name
       FROM applications a
@@ -42,29 +43,42 @@ export const getApplications = (req: Request, res: Response) => {
 
     const rows = db.prepare(query).all(...params) as any[];
 
-    const data = rows.map(r => ({
-      id: r.id,
-      applicantId: r.applicant_id,
-      applicantName: r.applicant_name,
-      applicantCategory: r.applicant_category,
-      applicantState: r.applicant_state,
-      instituteName: r.institute_name,
-      aadhaarMasked: r.aadhaar_masked,
-      schemeId: r.scheme_id,
-      schemeName: r.scheme_name,
-      schemeCode: r.scheme_code,
-      schemeLevel: r.scheme_level,
-      academicYear: r.academic_year,
-      status: r.status,
-      currentStage: r.current_stage,
-      submittedAt: r.submitted_at,
-      formData: JSON.parse(r.form_data || '{}'),
-      explainableStatus: r.explainable_status,
-      deficiencyReason: r.deficiency_reason,
-      aiDiscrepancyScore: r.ai_discrepancy_score,
-      createdAt: r.created_at,
-      updatedAt: r.updated_at
-    }));
+    const data = rows.map(r => {
+      const documents = db.prepare('SELECT * FROM documents WHERE application_id = ?').all(r.id) as any[];
+      return {
+        id: r.id,
+        applicantId: r.applicant_id,
+        applicantName: r.applicant_name,
+        applicantCategory: r.applicant_category,
+        applicantState: r.applicant_state,
+        instituteName: r.institute_name,
+        aadhaarMasked: r.aadhaar_masked,
+        schemeId: r.scheme_id,
+        schemeName: r.scheme_name,
+        schemeCode: r.scheme_code,
+        schemeLevel: r.scheme_level,
+        incomeCeiling: r.income_ceiling,
+        academicYear: r.academic_year,
+        status: r.status,
+        currentStage: r.current_stage,
+        submittedAt: r.submitted_at,
+        formData: JSON.parse(r.form_data || '{}'),
+        documents: documents.map(d => ({
+          id: d.id,
+          docType: d.doc_type,
+          fileName: d.file_name,
+          fileUrl: d.file_url,
+          ocrExtracted: d.ocr_extracted ? JSON.parse(d.ocr_extracted) : null,
+          status: d.status,
+          discrepancyNote: d.discrepancy_note
+        })),
+        explainableStatus: r.explainable_status,
+        deficiencyReason: r.deficiency_reason,
+        aiDiscrepancyScore: r.ai_discrepancy_score,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at
+      };
+    });
 
     res.json({ success: true, count: data.length, data });
   } catch (err: any) {

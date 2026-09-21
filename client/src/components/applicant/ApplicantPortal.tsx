@@ -5,7 +5,7 @@ import { StatusBadge } from '../common/StatusBadge';
 import { DocumentVerificationModal } from '../common/DocumentVerificationModal';
 import {
   FileText, AlertTriangle, CheckCircle, Clock,
-  PlusCircle, RefreshCw, Send, ShieldCheck, Upload
+  PlusCircle, RefreshCw, Send, ShieldCheck, Upload, FileSearch
 } from 'lucide-react';
 
 interface ApplicantPortalProps {
@@ -17,8 +17,12 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [applicant, setApplicant] = useState<Applicant | null>(null);
   const [digiLockerDocs, setDigiLockerDocs] = useState<any[]>([]);
-  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
-  const [selectedQrDoc, setSelectedQrDoc] = useState<{ title: string; docUri: string; certNo: string; issuer: string } | null>(null);
+  const [modalInspectionDossier, setModalInspectionDossier] = useState<{
+    document: any;
+    applicant?: any;
+    scheme?: any;
+    applicationId?: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [resubmitText, setResubmitText] = useState('');
   const [resubmitFiles, setResubmitFiles] = useState<any[]>([]);
@@ -201,13 +205,30 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
                 <button
                   type="button"
                   onClick={() => {
-                    setSelectedQrDoc({
-                      title: doc.title,
-                      docUri: doc.docUri,
-                      certNo: doc.verifiedData?.casteCertNumber || 'ST-PVTG-2026-9912',
-                      issuer: doc.issuer
+                    const certNum = doc.verifiedData?.certificateNumber ||
+                      (doc.docUri?.includes(':') ? doc.docUri.split(':').pop() : 'CG-CST-2021-BST-1109');
+                    const docType = doc.docType ||
+                      (doc.title?.toLowerCase().includes('caste') || doc.title?.toLowerCase().includes('tribe') ? 'CASTE_CERT' : 'INCOME_CERT');
+                    setModalInspectionDossier({
+                      document: {
+                        id: doc.id,
+                        docType: docType,
+                        fileName: doc.title,
+                        fileUrl: doc.docUri,
+                        status: 'ACCEPTED',
+                        ocrExtracted: {
+                          candidateName: doc.verifiedData?.candidateName || applicant?.name || 'Applicant',
+                          casteCategory: doc.verifiedData?.tribeName ? `${doc.verifiedData.tribeName} (Scheduled Tribe)` : (applicant?.category || 'Scheduled Tribe'),
+                          certificateNumber: certNum,
+                          issuingAuthority: doc.issuer,
+                          issueDate: doc.issueDate,
+                          annualIncome: doc.verifiedData?.annualIncome
+                        },
+                        discrepancyNote: null
+                      },
+                      applicant: applicant || undefined,
+                      scheme: { name: 'Ministry of Tribal Affairs Statutory Registry', code: 'MOTA', incomeCeiling: 250000 }
                     });
-                    setIsQrModalOpen(true);
                   }}
                   className="btn btn-secondary btn-sm"
                   style={{ fontSize: '0.6875rem', padding: '0.35rem 0.65rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', borderColor: '#86EFAC', color: '#166534', backgroundColor: '#F0FDF4' }}
@@ -373,6 +394,81 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
                     </div>
                   </div>
 
+                  {/* Submitted Application Documents & AI Inspection Dossier */}
+                  {app.documents && app.documents.length > 0 && (
+                    <div style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px solid #E2E8F0' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#0A2540', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <FileText size={13} /> Submitted Application Documents & AI Inspection Dossier ({app.documents.length}):
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        {app.documents.map((doc: any) => (
+                          <div
+                            key={doc.id}
+                            style={{
+                              padding: '0.55rem 0.75rem',
+                              borderRadius: '4px',
+                              border: `1px solid ${doc.status === 'DEFICIENCY_FLAGGED' ? '#FCA5A5' : '#E2E8F0'}`,
+                              backgroundColor: doc.status === 'DEFICIENCY_FLAGGED' ? '#FEF2F2' : '#F8FAFC',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              fontSize: '0.75rem'
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontWeight: 600, color: doc.status === 'DEFICIENCY_FLAGGED' ? '#991B1B' : '#0A2540' }}>
+                                {doc.docType}: {doc.fileName}
+                              </div>
+                              {doc.ocrExtracted && (
+                                <div style={{ fontSize: '0.6875rem', color: '#64748B', marginTop: '0.15rem' }}>
+                                  Extracted Name: <strong>{doc.ocrExtracted.candidateName}</strong>
+                                  {(doc.ocrExtracted.annualIncome != null || doc.ocrExtracted.annualIncomeInr != null) && (
+                                    <span style={{ fontWeight: 600, color: doc.status === 'DEFICIENCY_FLAGGED' ? '#DC2626' : '#166534', marginLeft: '0.35rem' }}>
+                                      • Income: ₹{(doc.ocrExtracted.annualIncome ?? doc.ocrExtracted.annualIncomeInr).toLocaleString('en-IN')}
+                                    </span>
+                                  )}
+                                  {doc.ocrExtracted.casteCategory && (
+                                    <span style={{ marginLeft: '0.35rem' }}>• Category: {doc.ocrExtracted.casteCategory}</span>
+                                  )}
+                                </div>
+                              )}
+                              {doc.discrepancyNote && (
+                                <div style={{ fontSize: '0.6875rem', color: '#B91C1C', marginTop: '0.2rem', fontWeight: 500 }}>
+                                  ⚠️ {doc.discrepancyNote}
+                                </div>
+                              )}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => setModalInspectionDossier({
+                                document: doc,
+                                applicant: applicant || undefined,
+                                scheme: { name: app.schemeName, code: app.schemeCode, incomeCeiling: app.incomeCeiling || 250000 },
+                                applicationId: app.id
+                              })}
+                              className="btn btn-secondary btn-sm"
+                              style={{
+                                fontSize: '0.6875rem',
+                                padding: '0.25rem 0.55rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                borderColor: doc.status === 'DEFICIENCY_FLAGGED' ? '#FCA5A5' : '#CBD5E1',
+                                color: doc.status === 'DEFICIENCY_FLAGGED' ? '#B91C1C' : '#1E293B',
+                                backgroundColor: '#FFFFFF',
+                                flexShrink: 0
+                              }}
+                            >
+                              <FileSearch size={12} />
+                              <span>Inspect & Verify Document</span>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Deficiency Resubmission Form */}
                   {isFlagged && (
                     <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '5px' }}>
@@ -434,14 +530,14 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
       </div>
 
       {/* Statutory e-District Certificate Verification Modal */}
-      {selectedQrDoc && (
+      {modalInspectionDossier && (
         <DocumentVerificationModal
-          isOpen={isQrModalOpen}
-          onClose={() => setIsQrModalOpen(false)}
-          documentTitle={selectedQrDoc.title}
-          docUri={selectedQrDoc.docUri}
-          certificateNumber={selectedQrDoc.certNo}
-          issuer={selectedQrDoc.issuer}
+          isOpen={!!modalInspectionDossier}
+          onClose={() => setModalInspectionDossier(null)}
+          document={modalInspectionDossier.document}
+          applicant={modalInspectionDossier.applicant}
+          scheme={modalInspectionDossier.scheme}
+          applicationId={modalInspectionDossier.applicationId}
         />
       )}
     </div>
