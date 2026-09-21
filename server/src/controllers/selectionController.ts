@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { getDb } from '../db/connection.js';
 import { SelectionEngine, CandidateForSelection } from '../services/selectionEngine.js';
 import { NosService } from '../services/nosService.js';
+import { uid } from '../services/uid.js';
 
 export const runWaterfallSimulation = (req: Request, res: Response) => {
   try {
@@ -153,11 +154,16 @@ export const runNosSelectionSimulation = (req: Request, res: Response) => {
 
     const result = SelectionEngine.runNosSelection(candidates, 20);
 
-    // Attach forex calculation to each candidate
+    // Attach forex calculation to each candidate using their actual university country
     const enrichedSelections = result.selections.map(s => {
-      const forex = NosService.computeForexAllowance(
-        s.university?.includes('Oxford') ? 'United Kingdom' : 'United States'
-      );
+      // Determine country: check QS university data, then fall back to heuristics
+      let country = 'United States';
+      const uni = (s as any).university || '';
+      const qsEntry = db.prepare('SELECT country FROM qs_universities WHERE name LIKE ? LIMIT 1').get(`%${uni.split('(')[0].trim()}%`) as any;
+      if (qsEntry) {
+        country = qsEntry.country;
+      }
+      const forex = NosService.computeForexAllowance(country);
       return {
         ...s,
         forexDetails: forex
@@ -203,6 +209,25 @@ export const signOffSelection = (req: Request, res: Response) => {
         `Selection Committee has formally signed off and approved fellowship award. Next: PFMS-DBT disbursement mandate generation.`,
         applicationId
       );
+
+      // Create formal selection record entry
+      const app = db.prepare('SELECT applicant_id, scheme_id FROM applications WHERE id = ?').get(applicationId) as any;
+      if (app) {
+        db.prepare(`
+          INSERT OR IGNORE INTO selection_records (
+            id, scheme_id, application_id, applicant_id, quota_tier, original_tier,
+            is_spillover, merit_rank, committee_signed_off, signed_off_at,
+            disbursement_amount_inr, status
+          ) VALUES (?, ?, ?, ?, ?, ?, 0, 1, 1, datetime('now'), 0, 'CONFIRMED')
+        `).run(
+          uid('sel'),
+          app.scheme_id,
+          applicationId,
+          app.applicant_id,
+          'COMMITTEE_APPROVED',
+          'COMMITTEE_APPROVED'
+        );
+      }
     }
 
     // Audit log with actor role
@@ -210,7 +235,7 @@ export const signOffSelection = (req: Request, res: Response) => {
       INSERT INTO audit_logs (id, entity_type, entity_id, actor, action, details)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(
-      `audit-${Date.now()}`,
+      uid('audit'),
       'APPLICATION',
       targetId,
       `${committeeMember || 'SELECTION_COMMITTEE_CHAIR'} (Role: ${actorRole})`,

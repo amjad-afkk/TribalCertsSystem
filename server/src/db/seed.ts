@@ -664,8 +664,8 @@ export function runSeed(db = getDb()) {
   console.log('Database seeded with 5 Schemes, QS Universities, 5 Applicants, 5 Applications, Fellowship Records, DigiLocker Docs, and Notifications.');
 }
 
-// Auto-run if executed directly
-if (process.argv[1]?.endsWith('seed.ts')) {
+// Auto-run if executed directly (supports tsx and compiled node dist/db/seed.js)
+if (process.argv[1] && /seed\.(ts|js)$/.test(process.argv[1])) {
   runSeed();
 }
 

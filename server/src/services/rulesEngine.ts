@@ -125,20 +125,26 @@ export class RulesEngine {
   }
 
   private static matchesCourseLevel(schemeLevel: string, userLevel: string): { isMatch: boolean } {
-    const s = schemeLevel.toLowerCase().replace(/['’]/g, '');
-    const u = userLevel.toLowerCase().replace(/['’]/g, '');
+    const s = schemeLevel.toLowerCase().replace(/['']/g, '');
+    const u = userLevel.toLowerCase().replace(/['']/g, '');
+
+    // Helper: word-boundary-aware match to avoid false positives (e.g. 'x' matching 'Oxford')
+    const wordMatch = (text: string, word: string) => {
+      const regex = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+      return regex.test(text);
+    };
 
     if (s.includes('overseas') || s.includes('abroad')) {
       return { isMatch: u.includes('overseas') || u.includes('abroad') || u.includes('master') || u.includes('phd') || u.includes('ph.d') };
     }
     if (s.includes('ix') || s.includes('pre-matric')) {
-      return { isMatch: u.includes('ix') || u.includes('x') || u.includes('class 9') || u.includes('class 10') || u.includes('pre-matric') };
+      return { isMatch: wordMatch(u, 'ix') || wordMatch(u, 'class 9') || wordMatch(u, 'class 10') || u.includes('pre-matric') || u.includes('class ix') || u.includes('class x') };
     }
     if (s.includes('post-graduate') || s.includes('xi') || s.includes('post-matric')) {
-      return { isMatch: u.includes('xi') || u.includes('xii') || u.includes('ug') || u.includes('pg') || u.includes('bachelor') || u.includes('master') || u.includes('class 11') || u.includes('class 12') };
+      return { isMatch: u.includes('xi') || u.includes('xii') || wordMatch(u, 'ug') || wordMatch(u, 'pg') || u.includes('bachelor') || u.includes('master') || u.includes('class 11') || u.includes('class 12') };
     }
     if (s.includes('top class') || s.includes('notified')) {
-      return { isMatch: u.includes('ug') || u.includes('pg') || u.includes('b.tech') || u.includes('m.tech') || u.includes('mba') || u.includes('mbbs') || u.includes('premier') };
+      return { isMatch: wordMatch(u, 'ug') || wordMatch(u, 'pg') || u.includes('b.tech') || u.includes('m.tech') || u.includes('mba') || u.includes('mbbs') || u.includes('premier') };
     }
     if (s.includes('m.phil') || s.includes('ph.d') || s.includes('fellowship')) {
       return { isMatch: u.includes('ph.d') || u.includes('phd') || u.includes('m.phil') || u.includes('research') };

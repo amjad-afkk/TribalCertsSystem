@@ -101,6 +101,9 @@ export const App: React.FC = () => {
     };
     if (currentUser) {
       fetchUnread();
+      // Refresh notification badge every 30 seconds while logged in
+      const interval = setInterval(fetchUnread, 30000);
+      return () => clearInterval(interval);
     } else {
       setUnreadNotifsCount(0);
     }
@@ -302,7 +305,7 @@ export const App: React.FC = () => {
         <main style={{ flex: 1, padding: '1.75rem 0' }}>
           <div className="container">
             {/* Public National Portal Entry & Login Gateway */}
-            {((!currentUser && currentTab !== 'simulator') || currentTab === 'login') && (
+            {!currentUser && currentTab !== 'simulator' && (
               <LandingLoginPage
                 onLoginSuccess={handleLoginSuccess}
                 onExploreSimulator={() => setCurrentTab('simulator')}

@@ -23,7 +23,7 @@ import {
   submitContinuationReport,
   submitThesis
 } from '../controllers/fellowshipController.js';
-import { getDigiLockerDocuments, verifyCertificateQr } from '../controllers/digilockerController.js';
+import { getDigiLockerDocuments, verifyCertificateRegistry } from '../controllers/digilockerController.js';
 import { getNotifications, markNotificationRead, sendTestNudge } from '../controllers/notificationController.js';
 import { getDb } from '../db/connection.js';
 import { extractRole, requireRoles } from '../middleware/auth.js';
@@ -47,7 +47,7 @@ router.post('/fellowship/thesis', submitThesis);
 // DigiLocker Integration & QR Verification (FR-1.2, Section 5.4)
 router.get('/digilocker/documents', getDigiLockerDocuments);
 router.get('/digilocker/documents/:applicantId', getDigiLockerDocuments);
-router.post('/digilocker/verify-qr', verifyCertificateQr);
+router.post('/digilocker/verify-certificate', verifyCertificateRegistry);
 
 // Multi-Channel Notifications (FR-4.6, §6.8)
 router.get('/notifications', getNotifications);

@@ -1,4 +1,5 @@
 const DEFAULT_BASE = import.meta.env.VITE_API_BASE || '/api';
+const DIRECT_BASE = 'http://localhost:4000/api';
 let API_BASE = DEFAULT_BASE;
 
 let activeUserRole: string = 'applicant-pooja';
@@ -23,13 +24,14 @@ const safeFetch = async (endpoint: string, options: RequestInit = {}): Promise<a
     let res = await fetch(url, options);
 
     // If proxied /api fails with 404 or connection error and API_BASE was relative, try direct localhost:4000
-    if (!res.ok && res.status === 404 && API_BASE === '/api') {
+    if (!res.ok && res.status === 404 && API_BASE === DEFAULT_BASE) {
       try {
-        const directUrl = `http://localhost:4000/api${endpoint}`;
+        const directUrl = `${DIRECT_BASE}${endpoint}`;
         const fallbackRes = await fetch(directUrl, options);
         if (fallbackRes.ok || fallbackRes.status < 500) {
           res = fallbackRes;
-          API_BASE = 'http://localhost:4000/api';
+          // Remember the working base, but DON'T permanently overwrite API_BASE
+          // so future requests still try the proxy first
         }
       } catch {
         // keep original response
@@ -49,11 +51,10 @@ const safeFetch = async (endpoint: string, options: RequestInit = {}): Promise<a
     }
   } catch (err: any) {
     // If relative fetch failed entirely (e.g. proxy issue), attempt direct localhost:4000
-    if (API_BASE === '/api') {
+    if (API_BASE === DEFAULT_BASE) {
       try {
-        const directUrl = `http://localhost:4000/api${endpoint}`;
+        const directUrl = `${DIRECT_BASE}${endpoint}`;
         const fallbackRes = await fetch(directUrl, options);
-        API_BASE = 'http://localhost:4000/api';
         const contentType = fallbackRes.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
           return await fallbackRes.json();
@@ -242,8 +243,14 @@ export const api = {
     const qs = applicantId ? `?applicantId=${encodeURIComponent(applicantId)}` : '';
     return safeFetch(`/digilocker/documents${qs}`, { headers: getHeaders() });
   },
-  verifyCertificateQr: async (payload: { docUri: string; certificateNumber?: string; issuer?: string }) => {
-    return safeFetch('/digilocker/verify-qr', {
+  verifyCertificateRegistry: async (payload: {
+    certificateNumber: string;
+    docType?: string;
+    issuer?: string;
+    applicantName?: string;
+    applicantId?: string;
+  }) => {
+    return safeFetch('/digilocker/verify-certificate', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload)

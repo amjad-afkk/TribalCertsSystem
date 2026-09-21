@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { getDb } from '../db/connection.js';
 import { DeduplicationEngine } from '../services/deduplication.js';
 import { parseSchemeRow } from './schemeController.js';
+import { uid } from '../services/uid.js';
 
 export const getApplications = (req: Request, res: Response) => {
   try {
@@ -37,7 +38,7 @@ export const getApplications = (req: Request, res: Response) => {
       params.push(stage);
     }
 
-    query += ' ORDER BY a.created_at DESC';
+    query += ' ORDER BY a.created_at DESC LIMIT 200';
 
     const rows = db.prepare(query).all(...params) as any[];
 
@@ -232,7 +233,7 @@ export const submitApplication = (req: Request, res: Response) => {
       INSERT INTO audit_logs (id, entity_type, entity_id, actor, action, details)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(
-      `audit-${Date.now()}`,
+      uid('audit'),
       'APPLICATION',
       appId,
       applicantRow.name,
@@ -262,6 +263,13 @@ export const resubmitDeficiency = (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
+    if (app.status !== 'DEFICIENCY_FLAGGED') {
+      return res.status(400).json({
+        success: false,
+        message: `Resubmission is only allowed when application status is DEFICIENCY_FLAGGED. Current status: ${app.status}.`
+      });
+    }
+
     db.prepare(`
       UPDATE applications
       SET status = 'RESUBMITTED',
@@ -279,7 +287,7 @@ export const resubmitDeficiency = (req: Request, res: Response) => {
       INSERT INTO audit_logs (id, entity_type, entity_id, actor, action, details)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(
-      `audit-${Date.now()}`,
+      uid('audit'),
       'APPLICATION',
       appId,
       'APPLICANT',

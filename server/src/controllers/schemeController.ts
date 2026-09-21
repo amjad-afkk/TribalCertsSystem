@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { getDb } from '../db/connection.js';
 import { Scheme } from '../types/index.js';
+import { uid } from '../services/uid.js';
 
 export function parseSchemeRow(row: any): Scheme {
   return {
@@ -53,7 +54,14 @@ export const createScheme = (req: Request, res: Response) => {
     const db = getDb();
     const body = req.body;
 
-    const id = `scheme-${body.code.toLowerCase()}-${Date.now()}`;
+    if (!body.code || !body.name || !body.level) {
+      return res.status(400).json({
+        success: false,
+        message: 'Required fields missing: code, name, and level are mandatory for scheme creation.'
+      });
+    }
+
+    const id = uid(`scheme-${body.code.toLowerCase()}`);
     const insert = db.prepare(`
       INSERT INTO schemes (
         id, code, name, level, description, legacy_portal,
@@ -87,7 +95,7 @@ export const createScheme = (req: Request, res: Response) => {
       INSERT INTO audit_logs (id, entity_type, entity_id, actor, action, details)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(
-      `audit-${Date.now()}`,
+      uid('audit'),
       'SCHEME',
       id,
       `Super Administrator (Role: ${(req as any).userRole || 'MOTA_ADMIN'})`,

@@ -85,7 +85,10 @@ export class DeduplicationEngine {
 
     const bankConflicts = bankReuseStmt.all(bankAccountHash, applicantId) as any[];
     if (bankConflicts.length > 0) {
-      conflictType = 'DUPLICATE_BANK_ACCOUNT';
+      // Only set conflictType to bank fraud if no higher-priority conflict is already active
+      if (conflictType === 'NONE') {
+        conflictType = 'DUPLICATE_BANK_ACCOUNT';
+      }
       warnings.push(
         `High-Risk Fraud Signal: The bank account submitted is already registered to another applicant (${bankConflicts[0].name}, Aadhaar ${bankConflicts[0].aadhaar_masked}). Cross-applicant bank reuse flagged for manual nodal scrutiny.`
       );

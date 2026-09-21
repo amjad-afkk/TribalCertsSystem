@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { getDb } from '../db/connection.js';
+import { uid } from '../services/uid.js';
 
 export const getFellowshipRecord = (req: Request, res: Response): void => {
   try {
@@ -70,7 +71,7 @@ export const submitJoiningReport = (req: Request, res: Response): void => {
       INSERT INTO audit_logs (id, entity_type, entity_id, actor, action, details)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(
-      `audit-${Date.now()}`,
+      uid('audit'),
       'FELLOWSHIP',
       fellowshipId,
       'APPLICANT',
@@ -82,7 +83,7 @@ export const submitJoiningReport = (req: Request, res: Response): void => {
     db.prepare(`
       INSERT INTO notifications (id, recipient_id, channel, title, message, is_read)
       VALUES (?, ?, 'IN_APP', 'Joining Report Confirmed', 'Your Ph.D./Fellowship joining formalities have been verified and confirmed by the INO.', 0)
-    `).run(`notif-${Date.now()}`, flw.applicant_id);
+    `).run(uid('notif'), flw.applicant_id);
 
     res.json({
       success: true,
@@ -112,7 +113,21 @@ export const submitContinuationReport = (req: Request, res: Response): void => {
       return;
     }
 
-    const reportId = `cont-${Date.now()}`;
+    // Prevent duplicate disbursement for the same quarter
+    const effectiveQuarter = Number(quarterNumber) || flw.current_quarter;
+    const existingReport = db.prepare(
+      'SELECT id FROM continuation_reports WHERE fellowship_id = ? AND quarter_number = ?'
+    ).get(fellowshipId, effectiveQuarter) as any;
+
+    if (existingReport) {
+      res.status(409).json({
+        success: false,
+        message: `Continuation report for Quarter ${effectiveQuarter} has already been submitted (ID: ${existingReport.id}). Duplicate disbursements are prohibited under MoTA fellowship guidelines.`
+      });
+      return;
+    }
+
+    const reportId = uid('cont');
     const pfmsTxn = `PFMS-DBT-2026-${Math.floor(100000 + Math.random() * 900000)}`;
     const stipendAmount = 93000; // 3 months * ₹31,000
 
@@ -144,7 +159,7 @@ export const submitContinuationReport = (req: Request, res: Response): void => {
       INSERT INTO audit_logs (id, entity_type, entity_id, actor, action, details)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(
-      `audit-${Date.now()}`,
+      uid('audit'),
       'FELLOWSHIP',
       fellowshipId,
       'APPLICANT',
@@ -156,7 +171,7 @@ export const submitContinuationReport = (req: Request, res: Response): void => {
     db.prepare(`
       INSERT INTO notifications (id, recipient_id, channel, title, message, is_read)
       VALUES (?, ?, 'SMS', 'Quarterly Fellowship Stipend Credited', 'MoTA Alert: ₹93,000 credited to Aadhaar-seeded bank account via PFMS Ref: ${pfmsTxn}.', 0)
-    `).run(`notif-${Date.now()}`, flw.applicant_id);
+    `).run(uid('notif'), flw.applicant_id);
 
     res.json({
       success: true,
@@ -196,7 +211,7 @@ export const submitThesis = (req: Request, res: Response): void => {
       INSERT INTO audit_logs (id, entity_type, entity_id, actor, action, details)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(
-      `audit-${Date.now()}`,
+      uid('audit'),
       'FELLOWSHIP',
       fellowshipId,
       'APPLICANT',
@@ -208,7 +223,7 @@ export const submitThesis = (req: Request, res: Response): void => {
     db.prepare(`
       INSERT INTO notifications (id, recipient_id, channel, title, message, is_read)
       VALUES (?, ?, 'WHATSAPP', 'Ph.D. Thesis Successfully Archived', 'Congratulations! Your thesis has been archived in the National Repository (ID: ${archiveNumber}). Final 5th-year fellowship grant is now unlocked.', 0)
-    `).run(`notif-${Date.now()}`, flw.applicant_id);
+    `).run(uid('notif'), flw.applicant_id);
 
     res.json({
       success: true,

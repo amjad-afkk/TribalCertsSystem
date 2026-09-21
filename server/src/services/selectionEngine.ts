@@ -136,6 +136,43 @@ export class SelectionEngine {
       }
     }
 
+    // Consume fallback general pool: candidates not selected in their sub-quota
+    // can compete on open merit for any remaining unfilled slots
+    const totalFilledSoFar = selections.length;
+    const remainingSlots = totalSlots - totalFilledSoFar;
+    if (remainingSlots > 0 && fallbackGeneralPool.length > 0) {
+      // Remove already-selected candidates from fallback pool
+      const selectedIds = new Set(selections.map(s => s.applicantId));
+      const eligibleFallback = fallbackGeneralPool
+        .filter(c => !selectedIds.has(c.applicantId))
+        .sort((a, b) => b.meritScore - a.meritScore);
+
+      const fillCount = Math.min(remainingSlots, eligibleFallback.length);
+      for (let i = 0; i < fillCount; i++) {
+        const c = eligibleFallback[i];
+        selections.push({
+          applicantId: c.applicantId,
+          applicationId: c.applicationId,
+          name: c.name,
+          meritScore: c.meritScore,
+          originalCategory: c.category,
+          allocatedTier: 'ST_GENERAL_FALLBACK',
+          isSpillover: true,
+          meritRank: selections.length + 1
+        });
+      }
+
+      if (fillCount > 0) {
+        transitions.push({
+          step: stepCount++,
+          fromTier: 'FALLBACK_POOL',
+          toTier: 'ST_GENERAL_FALLBACK',
+          slotsShifted: fillCount,
+          reason: `${fillCount} candidates from unfilled sub-quota tiers promoted to open merit pool to fill remaining slots.`
+        });
+      }
+    }
+
     return {
       schemeId: 'scheme-nfst',
       schemeCode: 'ARG45',

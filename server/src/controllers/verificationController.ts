@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { getDb } from '../db/connection.js';
 import { AuthenticatedRequest } from '../middleware/auth.js';
+import { uid } from '../services/uid.js';
 
 export const reviewApplication = (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -52,10 +53,12 @@ export const reviewApplication = (req: AuthenticatedRequest, res: Response) => {
       }
     } else if (action === 'FLAGGED_DEFICIENCY') {
       nextStatus = 'DEFICIENCY_FLAGGED';
+      nextStage = 'APPLICANT_RESUBMISSION';
       deficiencyReason = comments || 'Document inconsistency or clarification required.';
       explainableStatus = `Deficiency flagged by ${tier}: "${comments}". Application returned to applicant for resubmission.`;
     } else if (action === 'REJECTED') {
       nextStatus = 'REJECTED';
+      nextStage = 'CLOSED';
       explainableStatus = `Application rejected by ${tier}. Reason: ${comments}`;
     }
 
@@ -68,7 +71,7 @@ export const reviewApplication = (req: AuthenticatedRequest, res: Response) => {
     `).run(nextStatus, nextStage, explainableStatus, deficiencyReason, appId);
 
     // Insert verification stage record
-    const stageId = `vstage-${Date.now()}`;
+    const stageId = uid('vstage');
     db.prepare(`
       INSERT INTO verification_stages (
         id, application_id, tier, reviewer_id, reviewer_name, action, comments
@@ -88,7 +91,7 @@ export const reviewApplication = (req: AuthenticatedRequest, res: Response) => {
       INSERT INTO audit_logs (id, entity_type, entity_id, actor, action, details)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(
-      `audit-${Date.now()}`,
+      uid('audit'),
       'APPLICATION',
       appId,
       `${reviewerName || 'Nodal Officer'} (Role: ${userRole})`,

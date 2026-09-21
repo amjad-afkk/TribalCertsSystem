@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { getDb } from '../db/connection.js';
+import { uid } from '../services/uid.js';
 
 export const getNotifications = (req: Request, res: Response): void => {
   try {
@@ -61,7 +62,7 @@ export const sendTestNudge = (req: Request, res: Response): void => {
     const db = getDb();
     const { recipientId, channel = 'WHATSAPP', title, message } = req.body;
 
-    const id = `notif-${Date.now()}`;
+    const id = uid('notif');
     db.prepare(`
       INSERT INTO notifications (id, recipient_id, channel, title, message, is_read, created_at)
       VALUES (?, ?, ?, ?, ?, 0, datetime('now'))

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { getDb } from '../db/connection.js';
 import { UserRole } from '../types/index.js';
+import { uid } from '../services/uid.js';
 
 export const sendOtp = (req: Request, res: Response): void => {
   try {
@@ -37,10 +38,10 @@ export const sendOtp = (req: Request, res: Response): void => {
       applicant = db.prepare('SELECT * FROM applicants ORDER BY id ASC LIMIT 1').get();
     }
 
-    const sessionId = `auth-sess-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const sessionId = uid('auth-sess');
     // Deterministic simulated OTP for seamless demo testing (always 123456)
     const otpCode = '123456';
-    const expiresAt = new Date(Date.now() + 60 * 1000).toISOString(); // 60s TTL
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5-minute TTL
 
     db.prepare(`
       INSERT INTO auth_sessions (session_id, identifier, otp_code, expires_at, verified, applicant_id)
@@ -48,8 +49,8 @@ export const sendOtp = (req: Request, res: Response): void => {
     `).run(sessionId, cleanId || applicant?.aadhaar_masked || '123456789012', otpCode, expiresAt, applicant?.id || 'app-user-01');
 
     const maskedPhone = applicant?.phone
-      ? `${applicant.phone.slice(0, 4)}******${applicant.phone.slice(-3)}`
-      : '+91 98765*****';
+      ? applicant.phone.replace(/(\+91 \d{2})\d{5}(\d{3})/, '$1*****$2')
+      : '+91 98*****210';
 
     const maskedAadhaar = applicant?.aadhaar_masked || `XXXX-XXXX-${cleanId.slice(-4) || '4123'}`;
 
@@ -59,7 +60,7 @@ export const sendOtp = (req: Request, res: Response): void => {
       maskedPhone,
       maskedAadhaar,
       otpPreview: otpCode,
-      expiresInSeconds: 60,
+      expiresInSeconds: 300,
       applicantName: applicant?.name || 'Citizen Applicant',
       message: `Simulated OTP dispatched via UIDAI / SMS Gateway to registered mobile ${maskedPhone}.`
     });
@@ -99,9 +100,14 @@ export const verifyOtp = (req: Request, res: Response): void => {
 
     const applicant = db.prepare('SELECT * FROM applicants WHERE id = ?').get(session.applicant_id) as any;
 
+    if (!applicant) {
+      res.status(404).json({ success: false, message: 'Linked applicant profile not found. Please contact MoTA helpdesk.' });
+      return;
+    }
+
     res.json({
       success: true,
-      token: `jwt-sim-${session.applicant_id}-${Date.now()}`,
+      token: uid(`jwt-sim-${session.applicant_id}`),
       user: {
         id: applicant.id,
         name: applicant.name,
@@ -152,14 +158,15 @@ export const officerLogin = (req: Request, res: Response): void => {
     const target = roleMapping[designation] || roleMapping['INO'];
 
     // Verify PIN (default demo PIN: 1234 or 123456)
-    if (pin && pin !== '1234' && pin !== '123456') {
-      res.status(401).json({ success: false, message: 'Invalid Government 2FA PIN. Use default: 1234' });
+    const trimmedPin = (pin || '').trim();
+    if (!trimmedPin || (trimmedPin !== '1234' && trimmedPin !== '123456')) {
+      res.status(401).json({ success: false, message: 'Government 2FA PIN is required. Use default demo PIN: 1234' });
       return;
     }
 
     res.json({
       success: true,
-      token: `officer-token-${target.role.toLowerCase()}-${Date.now()}`,
+      token: uid(`officer-token-${target.role.toLowerCase()}`),
       user: {
         id: officerId || `OFFICER-${target.role}`,
         name: target.name,
