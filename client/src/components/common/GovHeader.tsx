@@ -66,7 +66,8 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
           { id: 'analytics', label: 'National Analytics Radar', icon: BarChart3 },
           { id: 'scheme-config', label: 'Scheme Policy Configurator', icon: Sliders },
           { id: 'verification', label: 'Verification Queue', icon: ShieldCheck },
-          { id: 'committee', label: 'Committee Sign-Off', icon: CheckCircle2 }
+          { id: 'committee', label: 'Committee Sign-Off', icon: CheckCircle2 },
+          { id: 'waterfall', label: 'Spillover Waterfall Visualizer', icon: GitFork }
         ];
 
       case 'APPLICANT':

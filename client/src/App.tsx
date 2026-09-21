@@ -185,8 +185,8 @@ export const App: React.FC = () => {
         id: 'app-user-05',
         name: 'Amitabh Gond',
         email: 'amitabh.gond@nitrr.ac.in',
-        phone: '+91 98765 43214',
-        aadhaarMasked: 'XXXX-XXXX-9901',
+        phone: '+91 99887 76655',
+        aadhaarMasked: 'XXXX-XXXX-1199',
         role: 'APPLICANT',
         category: 'ST_OTHER',
         isKycVerified: true,
@@ -196,8 +196,8 @@ export const App: React.FC = () => {
         id: 'app-user-03',
         name: 'Sunita Soren',
         email: 'sunita.soren@oxford.ac.uk',
-        phone: '+91 98765 43212',
-        aadhaarMasked: 'XXXX-XXXX-6789',
+        phone: '+91 91234 56789',
+        aadhaarMasked: 'XXXX-XXXX-6543',
         role: 'APPLICANT',
         category: 'FEMALE_ST',
         isKycVerified: true,
@@ -275,7 +275,8 @@ export const App: React.FC = () => {
                   currentRole === 'applicant-sunita' ? 420000 : 140000,
     state: currentRole === 'applicant-amitabh' ? 'Chhattisgarh' :
            currentRole === 'applicant-sunita' ? 'Odisha' : 'Madhya Pradesh',
-    district: 'Dindori',
+    district: currentRole === 'applicant-amitabh' ? 'Bastar' :
+              currentRole === 'applicant-sunita' ? 'Mayurbhanj' : 'Dindori',
     instituteName: currentRole === 'applicant-amitabh' ? 'NIT Raipur' :
                    currentRole === 'applicant-sunita' ? 'University of Oxford' : 'Jawaharlal Nehru University',
     courseLevel: currentRole === 'applicant-sunita' ? 'M.Sc Abroad' : 'Ph.D in Tribal Ethnography',
@@ -437,6 +438,9 @@ export const App: React.FC = () => {
       <RegionalChatbot
         onSelectScheme={(code) => {
           setDefaultApplySchemeCode(code);
+          if (!currentUser) {
+            handleSwitchPersona('applicant-pooja');
+          }
           setIsApplyModalOpen(true);
         }}
       />

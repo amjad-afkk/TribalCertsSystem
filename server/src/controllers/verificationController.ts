@@ -32,6 +32,27 @@ export const reviewApplication = (req: AuthenticatedRequest, res: Response) => {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
+    if (app.status === 'REJECTED' && action !== 'REJECTED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot review an already rejected application.'
+      });
+    }
+
+    if (tier === 'INO' && app.current_stage !== 'INO_SCRUTINY' && app.current_stage !== 'APPLICANT_RESUBMISSION') {
+      return res.status(400).json({
+        success: false,
+        message: `Application is currently at stage "${app.current_stage}". INO scrutiny is only permissible during INO_SCRUTINY.`
+      });
+    }
+
+    if (tier === 'STATE_NODAL' && app.current_stage !== 'STATE_SCRUTINY' && app.current_stage !== 'APPLICANT_RESUBMISSION') {
+      return res.status(400).json({
+        success: false,
+        message: `Application is currently at stage "${app.current_stage}". State scrutiny is only permissible during STATE_SCRUTINY.`
+      });
+    }
+
     let nextStatus = app.status;
     let nextStage = app.current_stage;
     let explainableStatus = app.explainable_status;

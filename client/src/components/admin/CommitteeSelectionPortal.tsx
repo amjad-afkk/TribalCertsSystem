@@ -15,6 +15,13 @@ export const CommitteeSelectionPortal: React.FC = () => {
       const resp = await api.runNosSelection();
       if (resp.success) {
         setNosData(resp.data);
+        const initialMap: Record<string, boolean> = {};
+        resp.data.selections?.forEach((cand: any) => {
+          if (cand.isSignedOff) {
+            initialMap[cand.applicationId] = true;
+          }
+        });
+        setSignedOffMap(prev => ({ ...initialMap, ...prev }));
       }
     } catch (err) {
       console.error('Failed to load NOS data:', err);
@@ -109,7 +116,12 @@ export const CommitteeSelectionPortal: React.FC = () => {
             <div className="gov-card" style={{ padding: '1rem', borderLeft: '3px solid #0A2540' }}>
               <span style={{ fontSize: '0.75rem', color: '#718096' }}>Forex Annual Outlay (Est.)</span>
               <h3 style={{ fontSize: '1.375rem', color: '#0A2540', marginTop: '0.25rem' }}>
-                ₹4.85 Crores
+                {(() => {
+                  const total = nosData.selections?.reduce((sum: number, c: any) => sum + (c.forexDetails?.totalAnnualDisbursementInr || 0), 0) || 0;
+                  return total >= 10000000
+                    ? `₹${(total / 10000000).toFixed(2)} Crores`
+                    : `₹${(total / 100000).toFixed(2)} Lakhs`;
+                })()}
               </h3>
             </div>
           </div>

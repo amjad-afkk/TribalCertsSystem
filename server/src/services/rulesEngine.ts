@@ -140,11 +140,14 @@ export class RulesEngine {
     if (s.includes('ix') || s.includes('pre-matric')) {
       return { isMatch: wordMatch(u, 'ix') || wordMatch(u, 'class 9') || wordMatch(u, 'class 10') || u.includes('pre-matric') || u.includes('class ix') || u.includes('class x') };
     }
+    if (s.includes('top class') || s.includes('notified')) {
+      // Top class education strictly targets UG/PG in 252 notified institutes (IITs, NITs, IIMs, AIIMS, etc.)
+      const isSchoolStudent = u.includes('xi') || u.includes('xii') || u.includes('class 9') || u.includes('class 10') || u.includes('class 11') || u.includes('class 12');
+      if (isSchoolStudent) return { isMatch: false };
+      return { isMatch: wordMatch(u, 'ug') || wordMatch(u, 'pg') || u.includes('b.tech') || u.includes('m.tech') || u.includes('mba') || u.includes('mbbs') || u.includes('undergraduate') || u.includes('bachelor') || u.includes('master') || u.includes('premier') };
+    }
     if (s.includes('post-graduate') || s.includes('xi') || s.includes('post-matric')) {
       return { isMatch: u.includes('xi') || u.includes('xii') || wordMatch(u, 'ug') || wordMatch(u, 'pg') || u.includes('bachelor') || u.includes('master') || u.includes('class 11') || u.includes('class 12') };
-    }
-    if (s.includes('top class') || s.includes('notified')) {
-      return { isMatch: wordMatch(u, 'ug') || wordMatch(u, 'pg') || u.includes('b.tech') || u.includes('m.tech') || u.includes('mba') || u.includes('mbbs') || u.includes('premier') };
     }
     if (s.includes('m.phil') || s.includes('ph.d') || s.includes('fellowship')) {
       return { isMatch: u.includes('ph.d') || u.includes('phd') || u.includes('m.phil') || u.includes('research') };

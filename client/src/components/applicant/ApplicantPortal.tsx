@@ -24,9 +24,9 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
     applicationId?: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [resubmitText, setResubmitText] = useState('');
-  const [resubmitFiles, setResubmitFiles] = useState<any[]>([]);
-  const [resubmitSuccess, setResubmitSuccess] = useState(false);
+  const [resubmitTextMap, setResubmitTextMap] = useState<Record<string, string>>({});
+  const [resubmitFilesMap, setResubmitFilesMap] = useState<Record<string, any[]>>({});
+  const [resubmitSuccessMap, setResubmitSuccessMap] = useState<Record<string, boolean>>({});
 
   // Map persona to applicant ID
   const applicantId =
@@ -64,49 +64,54 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
 
   useEffect(() => {
     loadData();
-    setResubmitSuccess(false);
+    setResubmitSuccessMap({});
   }, [currentRole]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (appId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = () => {
       const base64Data = reader.result as string;
-      setResubmitFiles(prev => [
+      setResubmitFilesMap(prev => ({
         ...prev,
-        {
-          id: `resub-${Date.now()}`,
-          docType: 'Income Certificate (Rectified)',
-          fileName: file.name,
-          mimeType: file.type || 'application/pdf',
-          fileData: base64Data,
-          status: 'PENDING',
-          ocrExtracted: {
-            candidateName: applicant?.name || 'Applicant',
-            issuingAuthority: 'Tehsildar / District Magistrate',
-            annualIncome: applicant?.annualIncome || 140000
+        [appId]: [
+          ...(prev[appId] || []),
+          {
+            id: `resub-${Date.now()}`,
+            docType: 'Income Certificate (Rectified)',
+            fileName: file.name,
+            mimeType: file.type || 'application/pdf',
+            fileData: base64Data,
+            status: 'PENDING',
+            ocrExtracted: {
+              candidateName: applicant?.name || 'Applicant',
+              issuingAuthority: 'Tehsildar / District Magistrate',
+              annualIncome: applicant?.annualIncome || 140000
+            }
           }
-        }
-      ]);
+        ]
+      }));
     };
     reader.readAsDataURL(file);
   };
 
   const handleResubmit = async (appId: string) => {
-    if (!resubmitText.trim() && resubmitFiles.length === 0) return;
+    const text = resubmitTextMap[appId] || '';
+    const files = resubmitFilesMap[appId] || [];
+    if (!text.trim() && files.length === 0) return;
     try {
       const resp = await api.resubmitDeficiency(appId, {
-        explanation: resubmitText,
-        newDocuments: resubmitFiles
+        explanation: text,
+        newDocuments: files
       });
       if (resp.success) {
-        setResubmitSuccess(true);
-        setResubmitText('');
-        setResubmitFiles([]);
+        setResubmitSuccessMap(prev => ({ ...prev, [appId]: true }));
+        setResubmitTextMap(prev => ({ ...prev, [appId]: '' }));
+        setResubmitFilesMap(prev => ({ ...prev, [appId]: [] }));
         setTimeout(() => {
-          setResubmitSuccess(false);
+          setResubmitSuccessMap(prev => ({ ...prev, [appId]: false }));
           loadData();
         }, 1200);
       }
@@ -271,11 +276,14 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
               const isDisbursed = app.status === 'DISBURSED';
               const isSelected = app.status === 'SELECTED' || isDisbursed;
 
+              const isScrutinized = isSelected || app.status === 'VERIFIED' || app.status === 'SHORTLISTED' || app.currentStage.includes('SCRUTINY') || app.currentStage.includes('COMMITTEE') || app.currentStage.includes('FINALIZED');
+              const isVerified = isSelected || app.status === 'VERIFIED' || app.status === 'SHORTLISTED' || app.currentStage.includes('COMMITTEE') || app.currentStage.includes('FINALIZED');
+
               const stages = [
                 { id: 1, label: 'Submitted', active: true },
-                { id: 2, label: isFlagged ? 'Deficiency' : 'Verified', active: app.status !== 'SUBMITTED', flagged: isFlagged },
-                { id: 3, label: 'Scrutiny', active: isSelected || app.currentStage.includes('SCRUTINY') },
-                { id: 4, label: 'Selection', active: isSelected || app.currentStage.includes('COMMITTEE') },
+                { id: 2, label: isFlagged ? 'Deficiency' : 'Scrutiny', active: isFlagged || isScrutinized || app.status !== 'SUBMITTED', flagged: isFlagged },
+                { id: 3, label: 'Verified', active: !isFlagged && isVerified },
+                { id: 4, label: 'Selection', active: isSelected || app.currentStage.includes('COMMITTEE') || app.currentStage.includes('FINALIZED') },
                 { id: 5, label: 'DBT Disbursed', active: isDisbursed }
               ];
 
@@ -476,7 +484,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
                         <RefreshCw size={14} /> Provide Clarification / Updated Document Reference
                       </div>
 
-                      {resubmitSuccess ? (
+                      {resubmitSuccessMap[app.id] ? (
                         <div style={{ color: '#166534', backgroundColor: '#DCFCE7', padding: '0.65rem 0.85rem', borderRadius: '4px', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                           <CheckCircle size={15} /> Clarification and documents submitted to scrutiny officer!
                         </div>
@@ -485,8 +493,8 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
                           <textarea
                             className="form-textarea"
                             rows={2}
-                            value={resubmitText}
-                            onChange={(e) => setResubmitText(e.target.value)}
+                            value={resubmitTextMap[app.id] || ''}
+                            onChange={(e) => setResubmitTextMap(prev => ({ ...prev, [app.id]: e.target.value }))}
                             placeholder="Enter clarification or note regarding the uploaded certificate..."
                             style={{ marginBottom: '0.5rem', fontSize: '0.8125rem' }}
                           />
@@ -498,12 +506,12 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
                             <input
                               type="file"
                               accept=".pdf,.png,.jpg,.jpeg"
-                              onChange={handleFileUpload}
+                              onChange={(e) => handleFileUpload(app.id, e)}
                               style={{ fontSize: '0.75rem', marginTop: '0.35rem', width: '100%' }}
                             />
-                            {resubmitFiles.length > 0 && (
+                            {(resubmitFilesMap[app.id] || []).length > 0 && (
                               <div style={{ marginTop: '0.35rem', fontSize: '0.75rem', color: '#166534', fontWeight: 500 }}>
-                                ✓ Ready to submit: {resubmitFiles.map(f => f.fileName).join(', ')}
+                                ✓ Ready to submit: {(resubmitFilesMap[app.id] || []).map(f => f.fileName).join(', ')}
                               </div>
                             )}
                           </div>
@@ -512,7 +520,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
                             <button
                               onClick={() => handleResubmit(app.id)}
                               className="btn btn-primary btn-sm"
-                              disabled={!resubmitText.trim() && resubmitFiles.length === 0}
+                              disabled={!(resubmitTextMap[app.id] || '').trim() && (resubmitFilesMap[app.id] || []).length === 0}
                               style={{ fontSize: '0.75rem' }}
                             >
                               <Send size={13} /> Submit Clarification & Documents

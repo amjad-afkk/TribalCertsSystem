@@ -202,7 +202,7 @@ export const SpilloverVisualizer: React.FC = () => {
                           alignItems: 'center',
                           gap: '0.35rem'
                         }}>
-                          <ArrowRight size={14} /> Cascading {spilledOut} seats to Tier {idx + 2}
+                          <ArrowRight size={14} /> {idx < tiers.length - 1 ? `Cascading ${spilledOut} seats to Tier ${idx + 2}` : `Final statutory pool: ${spilledOut} unfilled seats open`}
                         </div>
                       )}
                     </div>

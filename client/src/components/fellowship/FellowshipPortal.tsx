@@ -188,7 +188,7 @@ export const FellowshipPortal: React.FC<FellowshipPortalProps> = ({ applicantId 
             <div>
               <span style={{ fontSize: '0.75rem', color: '#718096', fontWeight: 600 }}>Current Research Quarter</span>
               <h3 style={{ fontSize: '1.25rem', color: '#1B7837', marginTop: '0.25rem' }}>
-                Quarter {fellowship.current_quarter} (Year 1)
+                Quarter {fellowship.current_quarter} (Year {Math.ceil((Number(fellowship.current_quarter) || 1) / 4)})
               </h3>
             </div>
             <Calendar size={20} style={{ color: '#1B7837' }} />

@@ -107,8 +107,8 @@ export const LandingLoginPage: React.FC<LandingLoginPageProps> = ({
   const handleQuickCitizenLogin = (personaKey: 'pooja' | 'amitabh' | 'sunita') => {
     const personas: Record<string, { identifier: string; personaId: string }> = {
       pooja: { identifier: 'XXXX-XXXX-4123', personaId: 'applicant-pooja' },
-      amitabh: { identifier: 'XXXX-XXXX-9901', personaId: 'applicant-amitabh' },
-      sunita: { identifier: 'XXXX-XXXX-6789', personaId: 'applicant-sunita' }
+      amitabh: { identifier: 'XXXX-XXXX-1199', personaId: 'applicant-amitabh' },
+      sunita: { identifier: 'XXXX-XXXX-6543', personaId: 'applicant-sunita' }
     };
     const p = personas[personaKey];
     setIdentifier(p.identifier);

@@ -171,7 +171,12 @@ export const DynamicApplicationForm: React.FC<DynamicApplicationFormProps> = ({
         applicantId: applicant.id,
         schemeId: selectedSchemeId,
         academicYear: '2026-2027',
-        formData,
+        formData: {
+          institute: applicant.instituteName,
+          claimedIncome: applicant.annualIncome,
+          academicPercentage: applicant.academicPercentage,
+          ...formData
+        },
         documents: uploadedDocs
       });
 
@@ -284,8 +289,37 @@ export const DynamicApplicationForm: React.FC<DynamicApplicationFormProps> = ({
               <input
                 type="text"
                 className="form-input"
-                defaultValue={applicant.instituteName}
+                value={formData.institute !== undefined ? formData.institute : applicant.instituteName}
                 onChange={(e) => handleFieldChange('institute', e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+            <div className="form-group">
+              <label className="form-label">Declared Annual Family Income (₹)</label>
+              <input
+                type="number"
+                className="form-input"
+                value={formData.claimedIncome !== undefined ? formData.claimedIncome : applicant.annualIncome}
+                onChange={(e) => handleFieldChange('claimedIncome', Number(e.target.value))}
+                placeholder="e.g. 240000"
+                required
+              />
+              <span style={{ fontSize: '0.6875rem', color: '#64748B', marginTop: '0.2rem', display: 'block' }}>
+                Must match the certified amount on your revenue income certificate.
+              </span>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Qualifying Academic Percentage (%)</label>
+              <input
+                type="number"
+                step="0.1"
+                className="form-input"
+                value={formData.academicPercentage !== undefined ? formData.academicPercentage : applicant.academicPercentage}
+                onChange={(e) => handleFieldChange('academicPercentage', Number(e.target.value))}
                 required
               />
             </div>

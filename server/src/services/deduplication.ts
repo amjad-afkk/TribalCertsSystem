@@ -47,7 +47,7 @@ export class DeduplicationEngine {
       JOIN schemes s ON a.scheme_id = s.id
       WHERE a.applicant_id = ?
         AND a.academic_year = ?
-        AND a.status NOT IN ('REJECTED', 'DRAFT')
+        AND a.status NOT IN ('REJECTED', 'DRAFT', 'DEFICIENCY_FLAGGED')
     `);
 
     const existingApps = existingAppsStmt.all(applicantId, academicYear) as any[];

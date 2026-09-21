@@ -197,7 +197,7 @@ export const submitApplication = (req: Request, res: Response) => {
       });
     }
 
-    const appId = `appln-${schemeRow.code.toLowerCase()}-${Date.now().toString().slice(-6)}`;
+    const appId = uid(`appln-${schemeRow.code.toLowerCase()}`);
     const now = new Date().toISOString();
 
     db.prepare(`
@@ -285,16 +285,42 @@ export const resubmitDeficiency = (req: Request, res: Response) => {
       });
     }
 
+    // Determine which scrutiny tier flagged the deficiency so it returns to the right queue
+    const lastFlagStage = db.prepare(`
+      SELECT tier FROM verification_stages
+      WHERE application_id = ? AND action = 'FLAGGED_DEFICIENCY'
+      ORDER BY timestamp DESC LIMIT 1
+    `).get(appId) as any;
+
+    const returnStage = lastFlagStage?.tier === 'STATE_NODAL' ? 'STATE_SCRUTINY' : 'INO_SCRUTINY';
+
     db.prepare(`
       UPDATE applications
       SET status = 'RESUBMITTED',
+          current_stage = ?,
           explainable_status = ?,
           deficiency_reason = NULL,
           updated_at = datetime('now')
       WHERE id = ?
     `).run(
-      `Applicant resolved deficiency: "${explanation}". Resubmitted for verification priority review.`,
+      returnStage,
+      `Applicant resolved deficiency: "${explanation}". Resubmitted to ${returnStage === 'STATE_SCRUTINY' ? 'State Nodal Officer' : 'Institute Nodal Officer'} for verification priority review.`,
       appId
+    );
+
+    // Record stage timeline event
+    db.prepare(`
+      INSERT INTO verification_stages (
+        id, application_id, tier, reviewer_id, reviewer_name, action, comments, timestamp
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `).run(
+      uid('vstage'),
+      appId,
+      returnStage === 'STATE_SCRUTINY' ? 'STATE_NODAL' : 'INO',
+      'APPLICANT',
+      'Applicant Resubmission',
+      'RESUBMITTED',
+      explanation || 'Applicant provided clarified documents for deficiency clearance.'
     );
 
     // If new replacement documents are provided, save them and resolve previous flagged documents

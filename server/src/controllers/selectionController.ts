@@ -73,11 +73,11 @@ export const runNosSelectionSimulation = (req: Request, res: Response) => {
   try {
     const db = getDb();
 
-    // Sample candidate pool for NOS demonstration
+    // Sample candidate pool for NOS demonstration (Sunita Soren links to real DB appln-nos-03)
     const candidates = [
       {
-        applicantId: 'nos-01',
-        applicationId: 'appln-nos-01',
+        applicantId: 'app-user-03',
+        applicationId: 'appln-nos-03',
         name: 'Sunita Soren',
         category: 'FEMALE_ST' as const,
         isPwD: false,
@@ -91,8 +91,8 @@ export const runNosSelectionSimulation = (req: Request, res: Response) => {
         discipline: 'STEM' as const
       },
       {
-        applicantId: 'nos-02',
-        applicationId: 'appln-nos-02',
+        applicantId: 'nos-cand-02',
+        applicationId: 'appln-nos-cand-02',
         name: 'Rajesh Munda',
         category: 'ST_OTHER' as const,
         isPwD: false,
@@ -106,8 +106,8 @@ export const runNosSelectionSimulation = (req: Request, res: Response) => {
         discipline: 'STEM' as const
       },
       {
-        applicantId: 'nos-03',
-        applicationId: 'appln-nos-03',
+        applicantId: 'nos-cand-03',
+        applicationId: 'appln-nos-cand-03',
         name: 'Anita Kerketta',
         category: 'FEMALE_ST' as const,
         isPwD: false,
@@ -121,8 +121,8 @@ export const runNosSelectionSimulation = (req: Request, res: Response) => {
         discipline: 'AGRI_MED' as const
       },
       {
-        applicantId: 'nos-04',
-        applicationId: 'appln-nos-04',
+        applicantId: 'nos-cand-04',
+        applicationId: 'appln-nos-cand-04',
         name: 'Dinesh Gond',
         category: 'PVTG' as const,
         isPwD: false,
@@ -136,8 +136,8 @@ export const runNosSelectionSimulation = (req: Request, res: Response) => {
         discipline: 'STEM' as const
       },
       {
-        applicantId: 'nos-05',
-        applicationId: 'appln-nos-05',
+        applicantId: 'nos-cand-05',
+        applicationId: 'appln-nos-cand-05',
         name: 'Priyanka Minz',
         category: 'FEMALE_ST' as const,
         isPwD: false,
@@ -164,9 +164,15 @@ export const runNosSelectionSimulation = (req: Request, res: Response) => {
         country = qsEntry.country;
       }
       const forex = NosService.computeForexAllowance(country);
+
+      // Check if application is already signed off in DB
+      const appRecord = db.prepare('SELECT status FROM applications WHERE id = ?').get(s.applicationId) as any;
+      const isSignedOff = appRecord?.status === 'SELECTED' || appRecord?.status === 'DISBURSED';
+
       return {
         ...s,
-        forexDetails: forex
+        forexDetails: forex,
+        isSignedOff: Boolean(isSignedOff)
       };
     });
 

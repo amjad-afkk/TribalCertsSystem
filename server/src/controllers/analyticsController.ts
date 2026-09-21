@@ -35,7 +35,7 @@ export const getMoTaAnalytics = (req: Request, res: Response) => {
         state: 'Chhattisgarh',
         docType: 'INCOME_CERT',
         flagRatePercent: 24.5,
-        primaryReason: 'Income format mismatch: Local revenue circle format lacks QR digital verification seal.'
+        primaryReason: 'Income format mismatch: Local revenue circle format lacks state e-District digital signature validation.'
       },
       {
         state: 'Jharkhand',

@@ -8,7 +8,7 @@ const KNOWLEDGE_FALLBACKS: Record<string, Record<string, { reply: string; scheme
       scheme: 'ARG45'
     },
     abroad: {
-      reply: 'For overseas studies (Master’s, Ph.D, Post-Doc abroad), apply for the National Overseas Scholarship (NOS - Code AZKMI). It covers full tuition and £9,900 / $15,400 living maintenance in QS Top 1000 universities.',
+      reply: 'For overseas studies (Master’s, Ph.D, Post-Doc abroad), apply for the National Overseas Scholarship (NOS - Code AZKMI). It covers full tuition and £15,400 / $17,400 living maintenance in QS Top 1000 universities.',
       scheme: 'AZKMI'
     },
     income: {
@@ -61,7 +61,7 @@ export async function chatWithGemini(req: Request, res: Response): Promise<void>
   if (apiKey && apiKey.trim().length > 0) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
       const languageInstructions: Record<string, string> = {
         EN: 'Respond in clear, encouraging, authoritative English.',
