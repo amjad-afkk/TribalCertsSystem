@@ -23,6 +23,8 @@ export function getDb(inMemory: boolean = false): DatabaseSync {
     }
     const dbPath = path.join(dataDir, 'mota.db');
     db = new DatabaseSync(dbPath);
+    db.exec('PRAGMA journal_mode = WAL;');
+    db.exec('PRAGMA busy_timeout = 5000;');
   }
 
   // Read and execute schema
@@ -30,6 +32,22 @@ export function getDb(inMemory: boolean = false): DatabaseSync {
   if (fs.existsSync(schemaPath)) {
     const schemaSql = fs.readFileSync(schemaPath, 'utf8');
     db.exec(schemaSql);
+  }
+
+  // Safe incremental migrations for existing databases
+  try {
+    const cols = db.prepare("PRAGMA table_info(auth_sessions)").all() as Array<{ name: string }>;
+    const colNames = cols.map(c => c.name);
+    if (colNames.length > 0) {
+      if (!colNames.includes('token')) {
+        db.exec("ALTER TABLE auth_sessions ADD COLUMN token TEXT;");
+      }
+      if (!colNames.includes('role')) {
+        db.exec("ALTER TABLE auth_sessions ADD COLUMN role TEXT DEFAULT 'APPLICANT';");
+      }
+    }
+  } catch {
+    // Ignore if table info cannot be retrieved during initial creation
   }
 
   if (!inMemory) {

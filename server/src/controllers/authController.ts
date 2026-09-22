@@ -95,8 +95,9 @@ export const verifyOtp = (req: Request, res: Response): void => {
       return;
     }
 
-    // Mark session verified
-    db.prepare('UPDATE auth_sessions SET verified = 1 WHERE session_id = ?').run(sessionId);
+    // Mark session verified and associate secure session token
+    const token = uid(`jwt-sim-${session.applicant_id}`);
+    db.prepare('UPDATE auth_sessions SET verified = 1, token = ?, role = ? WHERE session_id = ?').run(token, 'APPLICANT', sessionId);
 
     const applicant = db.prepare('SELECT * FROM applicants WHERE id = ?').get(session.applicant_id) as any;
 
@@ -107,7 +108,7 @@ export const verifyOtp = (req: Request, res: Response): void => {
 
     res.json({
       success: true,
-      token: uid(`jwt-sim-${session.applicant_id}`),
+      token,
       user: {
         id: applicant.id,
         name: applicant.name,
@@ -164,9 +165,27 @@ export const officerLogin = (req: Request, res: Response): void => {
       return;
     }
 
+    const db = getDb();
+    const token = uid(`officer-token-${target.role.toLowerCase()}`);
+    const sessionId = uid('officer-sess');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+    db.prepare(`
+      INSERT INTO auth_sessions (session_id, identifier, otp_code, expires_at, verified, applicant_id, token, role)
+      VALUES (?, ?, ?, ?, 1, ?, ?, ?)
+    `).run(
+      sessionId,
+      officerId || `OFFICER-${target.role}`,
+      'N/A',
+      expiresAt,
+      officerId || `OFFICER-${target.role}`,
+      token,
+      target.role
+    );
+
     res.json({
       success: true,
-      token: uid(`officer-token-${target.role.toLowerCase()}`),
+      token,
       user: {
         id: officerId || `OFFICER-${target.role}`,
         name: target.name,

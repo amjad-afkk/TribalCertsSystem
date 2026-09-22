@@ -43,8 +43,22 @@ export const getApplications = (req: Request, res: Response) => {
 
     const rows = db.prepare(query).all(...params) as any[];
 
+    // Batch fetch documents for all applications in a single query to eliminate N+1 overhead
+    const appIds = rows.map(r => r.id);
+    const docsByAppId: Record<string, any[]> = {};
+    if (appIds.length > 0) {
+      const placeholders = appIds.map(() => '?').join(',');
+      const allDocs = db.prepare(`SELECT * FROM documents WHERE application_id IN (${placeholders})`).all(...appIds) as any[];
+      for (const doc of allDocs) {
+        if (!docsByAppId[doc.application_id]) {
+          docsByAppId[doc.application_id] = [];
+        }
+        docsByAppId[doc.application_id].push(doc);
+      }
+    }
+
     const data = rows.map(r => {
-      const documents = db.prepare('SELECT * FROM documents WHERE application_id = ?').all(r.id) as any[];
+      const documents = docsByAppId[r.id] || [];
       return {
         id: r.id,
         applicantId: r.applicant_id,

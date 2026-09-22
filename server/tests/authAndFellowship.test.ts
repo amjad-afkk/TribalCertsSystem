@@ -4,7 +4,7 @@ import { getDb } from '../src/db/connection.js';
 import { runSeed } from '../src/db/seed.js';
 
 describe('Auth & Fellowship Post-Selection Management Engine', () => {
-  const db = getDb();
+  const db = getDb(true);
   runSeed(db);
 
   test('should create OTP session with 60s expiration and verify valid code', () => {

@@ -40,7 +40,10 @@ export class NosService {
   }
 
   /**
-   * Computes foreign currency maintenance & fellowship entitlement per MoTA NOS guidelines
+   * Computes foreign currency maintenance & fellowship entitlement per MoTA NOS statutory guidelines.
+   * NOTE: Exchange rates below represent the statutory benchmark rates for budgeting and simulation.
+   * In a live ministry deployment with PFMS integration, these can be pulled dynamically via
+   * RBI reference rate feed or SBI foreign exchange card rates.
    */
   static computeForexAllowance(country: string): ForexAllowanceCalculation {
     const c = country.toLowerCase();

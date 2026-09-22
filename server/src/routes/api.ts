@@ -27,6 +27,7 @@ import { getDigiLockerDocuments, verifyCertificateRegistry } from '../controller
 import { getNotifications, markNotificationRead, sendTestNudge } from '../controllers/notificationController.js';
 import { getDb } from '../db/connection.js';
 import { extractRole, requireRoles } from '../middleware/auth.js';
+import { validateBody, schemas } from '../middleware/validation.js';
 
 const router = Router();
 
@@ -34,15 +35,15 @@ const router = Router();
 router.use(extractRole);
 
 // Authentication & Identity (Citizen Aadhaar OTP + Officer SSO)
-router.post('/auth/send-otp', sendOtp);
-router.post('/auth/verify-otp', verifyOtp);
-router.post('/auth/officer-login', officerLogin);
+router.post('/auth/send-otp', validateBody(schemas.sendOtp), sendOtp);
+router.post('/auth/verify-otp', validateBody(schemas.verifyOtp), verifyOtp);
+router.post('/auth/officer-login', validateBody(schemas.officerLogin), officerLogin);
 
 // Post-Selection Fellowship Lifecycle (FR-7.1 to FR-7.5)
 router.get('/fellowship/:applicantId', getFellowshipRecord);
-router.post('/fellowship/joining', submitJoiningReport);
-router.post('/fellowship/continuation', submitContinuationReport);
-router.post('/fellowship/thesis', submitThesis);
+router.post('/fellowship/joining', validateBody(schemas.submitJoining), submitJoiningReport);
+router.post('/fellowship/continuation', validateBody(schemas.submitContinuation), submitContinuationReport);
+router.post('/fellowship/thesis', validateBody(schemas.submitThesis), submitThesis);
 
 // DigiLocker Integration & QR Verification (FR-1.2, Section 5.4)
 router.get('/digilocker/documents', getDigiLockerDocuments);
@@ -58,31 +59,31 @@ router.post('/notifications/test-nudge', sendTestNudge);
 // Schemes (Public discovery; Policy onboarding restricted to Super Admin)
 router.get('/schemes', getAllSchemes);
 router.get('/schemes/:id', getSchemeById);
-router.post('/schemes', requireRoles(['MOTA_ADMIN']), createScheme);
+router.post('/schemes', requireRoles(['MOTA_ADMIN']), validateBody(schemas.createScheme), createScheme);
 
 // Scholarship Twin Simulator (Open citizen self-service)
-router.post('/simulator/match', runSimulator);
+router.post('/simulator/match', validateBody(schemas.simulatorMatch), runSimulator);
 
 // Applications
 router.get('/applications', getApplications);
 router.get('/applications/:id', getApplicationById);
-router.post('/applications', submitApplication);
+router.post('/applications', validateBody(schemas.submitApplication), submitApplication);
 router.post('/applications/:id/resubmit', resubmitDeficiency);
 
 // Verification & Scrutiny (Restricted to Nodal & Ministry Officers)
-router.post('/applications/:id/review', requireRoles(['INO', 'STATE_NODAL', 'MOTA_ADMIN']), reviewApplication);
-router.patch('/documents/:docId/status', requireRoles(['INO', 'STATE_NODAL', 'MOTA_ADMIN']), reviewDocument);
+router.post('/applications/:id/review', requireRoles(['INO', 'STATE_NODAL', 'MOTA_ADMIN']), validateBody(schemas.reviewApplication), reviewApplication);
+router.patch('/documents/:docId/status', requireRoles(['INO', 'STATE_NODAL', 'MOTA_ADMIN']), validateBody(schemas.reviewDocument), reviewDocument);
 
 // AI Document OCR & Verification
-router.post('/documents/extract', extractAndVerifyDocument);
+router.post('/documents/extract', validateBody(schemas.documentExtract), extractAndVerifyDocument);
 
 // AI Chatbot Assistant
-router.post('/chatbot', chatWithGemini);
+router.post('/chatbot', validateBody(schemas.chatbot), chatWithGemini);
 
 // Selection & Waterfalls
-router.post('/selection/waterfall', runWaterfallSimulation);
+router.post('/selection/waterfall', validateBody(schemas.waterfall), runWaterfallSimulation);
 router.get('/selection/nos', runNosSelectionSimulation);
-router.post('/selection/sign-off', requireRoles(['COMMITTEE', 'MOTA_ADMIN']), signOffSelection);
+router.post('/selection/sign-off', requireRoles(['COMMITTEE', 'MOTA_ADMIN']), validateBody(schemas.selectionSignOff), signOffSelection);
 
 // MoTA Analytics & Heatmaps (Restricted to Officers & Administrators)
 router.get('/analytics', requireRoles(['INO', 'STATE_NODAL', 'COMMITTEE', 'MOTA_ADMIN']), getMoTaAnalytics);

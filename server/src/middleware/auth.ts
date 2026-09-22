@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserRole } from '../types/index.js';
+import { getDb } from '../db/connection.js';
 
 // Normalization map supporting both canonical role keys and demo persona IDs
 const ROLE_MAP: Record<string, UserRole> = {
@@ -23,18 +24,58 @@ const ROLE_MAP: Record<string, UserRole> = {
 export interface AuthenticatedRequest extends Request {
   userRole?: UserRole;
   personaId?: string;
+  userId?: string;
 }
 
 /**
- * Extracts and normalizes the user's role from incoming request headers.
- * Defaults to APPLICANT if not explicitly supplied.
+ * Extracts and verifies the user's role:
+ * 1. Checks `Authorization: Bearer <token>` in `auth_sessions` table.
+ * 2. If valid session found, binds role and user identity to request.
+ * 3. If in DEMO_MODE, allows fallback to `x-user-role` / `x-persona-id` header for rapid persona switching.
+ * 4. Defaults to APPLICANT (least privilege) if unauthenticated.
  */
 export const extractRole = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-  const rawHeader = (req.headers['x-user-role'] || req.headers['x-persona-id'] || 'APPLICANT') as string;
-  const normalized = ROLE_MAP[rawHeader] || 'APPLICANT';
+  const authHeader = req.headers['authorization'];
+  let bearerToken: string | null = null;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    bearerToken = authHeader.slice(7).trim();
+  }
 
-  req.userRole = normalized;
-  req.personaId = rawHeader;
+  // 1. Validate bearer token against database sessions if provided
+  if (bearerToken) {
+    try {
+      const db = getDb();
+      const session = db.prepare('SELECT * FROM auth_sessions WHERE token = ? AND verified = 1').get(bearerToken) as any;
+      if (session) {
+        // Check session expiration if set
+        const notExpired = !session.expires_at || new Date(session.expires_at) > new Date();
+        if (notExpired) {
+          req.userRole = (session.role as UserRole) || 'APPLICANT';
+          req.userId = session.applicant_id;
+          req.personaId = session.role;
+          return next();
+        }
+      }
+    } catch {
+      // In case DB is not yet available or in mock context, proceed to fallback
+    }
+  }
+
+  // 2. Fallback to demo headers if DEMO_MODE is active
+  const isDemoMode = process.env.DEMO_MODE !== 'false';
+  if (isDemoMode) {
+    const rawHeader = (req.headers['x-user-role'] || req.headers['x-persona-id']) as string;
+    if (rawHeader) {
+      const normalized = ROLE_MAP[rawHeader] || 'APPLICANT';
+      req.userRole = normalized;
+      req.personaId = rawHeader;
+      return next();
+    }
+  }
+
+  // 3. Default to lowest privilege APPLICANT
+  req.userRole = 'APPLICANT';
+  req.personaId = 'APPLICANT';
   next();
 };
 

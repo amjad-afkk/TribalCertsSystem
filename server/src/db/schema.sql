@@ -132,6 +132,8 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
   expires_at TEXT NOT NULL,
   verified INTEGER NOT NULL DEFAULT 0,
   applicant_id TEXT,
+  token TEXT,
+  role TEXT DEFAULT 'APPLICANT',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
