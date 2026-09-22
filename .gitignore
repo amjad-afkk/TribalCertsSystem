@@ -6,15 +6,37 @@ package-lock.json
 dist/
 build/
 
-# Environment
+# Environment & Secrets
 .env
-.env.local
+.env.*
+*.env
+*.pem
+*.key
+*.pfx
+*.p12
 
 # Databases and runtime data
 *.sqlite
 *.sqlite3
+*.db
 *.db-journal
-server/data/*.db
+server/data/
+
+# Documentation & SRS
+SRS_*.md
+*DOCUMENTATION*.md
+*documentation*.html
+*.pdf
+
+# Generation scripts
+generate_*.py
+
+# Videos & media
+*.mp4
+*.webm
+*.mov
+*.avi
+*.mkv
 
 # Logs
 *.log
