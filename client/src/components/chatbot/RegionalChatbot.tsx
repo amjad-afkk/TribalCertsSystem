@@ -228,7 +228,7 @@ export const RegionalChatbot: React.FC<RegionalChatbotProps> = ({ onSelectScheme
                 {m.sender === 'bot' && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem', fontSize: '0.6875rem', color: m.isAi ? '#1A4D8F' : '#64748B', fontWeight: 600 }}>
                     <Sparkles size={11} />
-                    <span>{m.isAi ? 'Gemini 1.5 Flash' : 'MoTA Advisory'}</span>
+                    <span>{m.isAi ? 'Gemini 3.6 Flash' : 'MoTA Advisory'}</span>
                   </div>
                 )}
                 {m.text}
