@@ -18,13 +18,15 @@ const getHeaders = (extra: Record<string, string> = {}): Record<string, string> 
   };
 };
 
+const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
 const safeFetch = async (endpoint: string, options: RequestInit = {}): Promise<any> => {
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
   try {
     let res = await fetch(url, options);
 
-    // If proxied /api fails with 404 or connection error and API_BASE was relative, try direct localhost:4000
-    if (!res.ok && res.status === 404 && API_BASE === DEFAULT_BASE) {
+    // If proxied /api fails with 404 and running locally, try direct localhost:4000
+    if (!res.ok && res.status === 404 && API_BASE === DEFAULT_BASE && isLocal) {
       try {
         const directUrl = `${DIRECT_BASE}${endpoint}`;
         const fallbackRes = await fetch(directUrl, options);
@@ -50,8 +52,8 @@ const safeFetch = async (endpoint: string, options: RequestInit = {}): Promise<a
       return { success: false, message: text || `HTTP ${res.status}: ${res.statusText}` };
     }
   } catch (err: any) {
-    // If relative fetch failed entirely (e.g. proxy issue), attempt direct localhost:4000
-    if (API_BASE === DEFAULT_BASE) {
+    // If relative fetch failed entirely and running locally, attempt direct localhost:4000
+    if (API_BASE === DEFAULT_BASE && isLocal) {
       try {
         const directUrl = `${DIRECT_BASE}${endpoint}`;
         const fallbackRes = await fetch(directUrl, options);
