@@ -17,7 +17,9 @@ export function getDb(inMemory: boolean = false): DatabaseSync {
   if (inMemory) {
     db = new DatabaseSync(':memory:');
   } else {
-    const dataDir = path.resolve(__dirname, '../../data');
+    const dataDir = process.env.DATA_DIR
+      ? path.resolve(process.env.DATA_DIR)
+      : path.resolve(__dirname, '../../data');
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
     }
@@ -27,9 +29,17 @@ export function getDb(inMemory: boolean = false): DatabaseSync {
     db.exec('PRAGMA busy_timeout = 5000;');
   }
 
-  // Read and execute schema
-  const schemaPath = path.resolve(__dirname, 'schema.sql');
-  if (fs.existsSync(schemaPath)) {
+  // Read and execute schema with robust path resolution for dev & prod
+  const schemaCandidates = [
+    path.resolve(__dirname, 'schema.sql'),
+    path.resolve(__dirname, '../../src/db/schema.sql'),
+    path.resolve(process.cwd(), 'server/src/db/schema.sql'),
+    path.resolve(process.cwd(), 'src/db/schema.sql'),
+    path.resolve(process.cwd(), 'server/dist/db/schema.sql'),
+    path.resolve(process.cwd(), 'dist/db/schema.sql')
+  ];
+  const schemaPath = schemaCandidates.find(candidate => fs.existsSync(candidate));
+  if (schemaPath) {
     const schemaSql = fs.readFileSync(schemaPath, 'utf8');
     db.exec(schemaSql);
   }

@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: mota-scholarship-system
+    runtime: node
+    plan: free
+    branch: deploy
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
+      - key: DEMO_MODE
+        value: "true"
+      - key: GEMINI_API_KEY
+        sync: false
