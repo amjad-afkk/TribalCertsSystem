@@ -10,6 +10,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 22.12.0
+      - key: NODE_OPTIONS
+        value: "--experimental-sqlite"
       - key: DEMO_MODE
         value: "true"
       - key: GEMINI_API_KEY
