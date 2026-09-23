@@ -16,18 +16,37 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Restrict CORS origins to authorized frontend clients
-const defaultAllowedOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4000', 'http://127.0.0.1:4000'];
+const defaultAllowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:4000',
+  'http://127.0.0.1:4000'
+];
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
   : defaultAllowedOrigins;
 
+const isOriginAllowed = (origin: string): boolean => {
+  if (process.env.DEMO_MODE === 'true') return true;
+  if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) return true;
+  try {
+    const parsed = new URL(origin);
+    if (parsed.hostname.endsWith('.onrender.com')) return true;
+    if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') return true;
+  } catch {
+    // If not a parseable URL, fall back to exact match
+  }
+  return false;
+};
+
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, or server-to-server)
-    if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+    // Allow requests with no origin (like mobile apps, curl, server-to-server) or valid origins
+    if (!origin || isOriginAllowed(origin)) {
       return callback(null, true);
     }
-    return callback(new Error(`CORS policy violation: Origin ${origin} not permitted.`));
+    // Reject gracefully without throwing an unhandled 500 Error
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -79,14 +98,37 @@ const clientDistPath = clientDistCandidates.find(candidate => fs.existsSync(cand
 
 if (clientDistPath) {
   console.log(`Serving static client bundle from: ${clientDistPath}`);
-  app.use(express.static(clientDistPath));
+  app.use(express.static(clientDistPath, {
+    maxAge: '1d'
+  }));
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path === '/health') {
       return next();
     }
-    res.sendFile(path.join(clientDistPath, 'index.html'));
+    // Never send HTML for missing assets or files with extensions
+    if (req.path.startsWith('/assets/') || path.extname(req.path)) {
+      return res.status(404).type('text/plain').send('Asset not found');
+    }
+    res.sendFile(path.join(clientDistPath, 'index.html'), (err) => {
+      if (err) {
+        next(err);
+      }
+    });
   });
 }
+
+// Global JSON error handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Unhandled server error:', err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(err.status || 500).json({
+    success: false,
+    error: 'INTERNAL_SERVER_ERROR',
+    message: err.message || 'An unexpected server error occurred.'
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`MoTA Scholarship Platform Backend running on http://localhost:${PORT}`);

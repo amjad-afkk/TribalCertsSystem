@@ -130,4 +130,28 @@ describe('Security, Validation & Token Auth Engine', () => {
     assert.strictEqual(nextCalled3, false);
     assert.strictEqual(statusCode, 403);
   });
+
+  test('validateBody should allow empty or populated body for waterfall simulation', () => {
+    const waterfallMiddleware = validateBody(schemas.waterfall);
+    let nextCalled = false;
+    const req: any = { body: {} };
+    const res: any = { status: () => ({ json: () => {} }) };
+    waterfallMiddleware(req, res, () => { nextCalled = true; });
+    assert.strictEqual(nextCalled, true);
+  });
+
+  test('validateBody should accept valid selectionSignOff payload without requiring academicYear', () => {
+    const signOffMiddleware = validateBody(schemas.selectionSignOff);
+    let nextCalled = false;
+    const req: any = {
+      body: {
+        applicationId: 'app-123',
+        committeeMember: 'Prof. Marandi',
+        comments: 'Award approved'
+      }
+    };
+    const res: any = { status: () => ({ json: () => {} }) };
+    signOffMiddleware(req, res, () => { nextCalled = true; });
+    assert.strictEqual(nextCalled, true);
+  });
 });

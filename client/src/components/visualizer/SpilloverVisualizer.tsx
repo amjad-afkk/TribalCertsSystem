@@ -21,6 +21,7 @@ interface TransitionData {
 
 export const SpilloverVisualizer: React.FC = () => {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<{
     totalAvailableSlots: number;
     totalFilledSlots: number;
@@ -35,14 +36,18 @@ export const SpilloverVisualizer: React.FC = () => {
 
   const runSimulation = async () => {
     setLoading(true);
+    setError(null);
     try {
       const resp = await api.runWaterfallSimulation();
-      if (resp.success) {
+      if (resp && resp.success && resp.data) {
         setData(resp.data);
         setActiveStep(resp.data.transitions.length); // Default to full cascade
+      } else {
+        setError(resp?.message || resp?.error || 'Failed to compute waterfall simulation.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Waterfall simulation error:', err);
+      setError(err?.message || 'Error executing waterfall simulation.');
     } finally {
       setLoading(false);
     }
@@ -117,12 +122,24 @@ export const SpilloverVisualizer: React.FC = () => {
         </div>
       </div>
 
-      {loading || !data ? (
+      {loading ? (
         <div className="gov-card" style={{ textAlign: 'center', padding: '3rem', color: '#718096' }}>
           <RefreshCw className="animate-spin" size={28} style={{ margin: '0 auto 1rem' }} />
           Computing live 4-tier candidate allocations and spillover matrices...
         </div>
-      ) : (
+      ) : error ? (
+        <div className="gov-card" style={{ textAlign: 'center', padding: '2.5rem', borderLeft: '4px solid #C53030' }}>
+          <div style={{ color: '#C53030', fontWeight: 600, fontSize: '1.05rem', marginBottom: '0.5rem' }}>
+            Unable to Compute Reservation Waterfall
+          </div>
+          <p style={{ color: '#4A5568', fontSize: '0.875rem', marginBottom: '1.25rem', maxWidth: '500px', margin: '0 auto 1.25rem' }}>
+            {error}
+          </p>
+          <button onClick={runSimulation} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+            <RefreshCw size={16} /> Retry Calculation
+          </button>
+        </div>
+      ) : data ? (
         <>
           {/* Waterfall Cascade Graphic */}
           <div className="gov-card" style={{ padding: '1.75rem' }}>
@@ -290,7 +307,7 @@ export const SpilloverVisualizer: React.FC = () => {
                     <tr key={cand.applicationId}>
                       <td><strong>#{cand.meritRank}</strong></td>
                       <td>{cand.name}</td>
-                      <td>{cand.originalCategory.replace('_', ' ')}</td>
+                      <td>{(cand.originalCategory || 'ST').replace('_', ' ')}</td>
                       <td>
                         <span className="badge badge-info" style={{ fontSize: '0.6875rem' }}>
                           {cand.allocatedTier}
@@ -313,7 +330,7 @@ export const SpilloverVisualizer: React.FC = () => {
             </div>
           </div>
         </>
-      )}
+      ) : null}
     </div>
   );
 };

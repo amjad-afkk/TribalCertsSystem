@@ -14,5 +14,7 @@ services:
         value: "--experimental-sqlite"
       - key: DEMO_MODE
         value: "true"
+      - key: ALLOWED_ORIGINS
+        value: "*"
       - key: GEMINI_API_KEY
         sync: false

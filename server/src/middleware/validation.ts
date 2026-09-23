@@ -131,10 +131,15 @@ export const schemas = {
     message: { required: true, type: 'string', minLength: 1 }
   },
   waterfall: {
-    academicYear: { required: true, type: 'string' }
+    academicYear: { required: false, type: 'string' },
+    schemeCode: { required: false, type: 'string' }
   },
   selectionSignOff: {
-    academicYear: { required: true, type: 'string' },
-    officerDesignation: { required: true, type: 'string' }
+    applicationId: { required: false, type: 'string' },
+    schemeId: { required: false, type: 'string' },
+    committeeMember: { required: false, type: 'string' },
+    comments: { required: false, type: 'string' },
+    academicYear: { required: false, type: 'string' },
+    officerDesignation: { required: false, type: 'string' }
   }
 } as const;
