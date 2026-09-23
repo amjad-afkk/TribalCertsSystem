@@ -159,7 +159,7 @@ export const api = {
     return safeFetch('/selection/waterfall', {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify(payload || {})
+      body: JSON.stringify({ academicYear: '2025-26', ...payload })
     });
   },
   runNosSelection: async () => {
