@@ -5,7 +5,8 @@ import {
   getApplications,
   getApplicationById,
   submitApplication,
-  resubmitDeficiency
+  resubmitDeficiency,
+  batchSyncApplications
 } from '../controllers/applicationController.js';
 import { reviewApplication, reviewDocument } from '../controllers/verificationController.js';
 import { extractAndVerifyDocument } from '../controllers/documentController.js';
@@ -90,6 +91,7 @@ router.get('/applications', getApplications);
 router.get('/applications/:id', getApplicationById);
 router.post('/applications', validateBody(schemas.submitApplication), submitApplication);
 router.post('/applications/:id/resubmit', resubmitDeficiency);
+router.post('/applications/batch-sync', batchSyncApplications);
 
 // Verification & Scrutiny (Restricted to Nodal & Ministry Officers)
 router.post('/applications/:id/review', requireRoles(['INO', 'STATE_NODAL', 'MOTA_ADMIN']), validateBody(schemas.reviewApplication), reviewApplication);

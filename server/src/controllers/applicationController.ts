@@ -385,3 +385,77 @@ export const resubmitDeficiency = (req: Request, res: Response) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
+export const batchSyncApplications = (req: Request, res: Response): void => {
+  try {
+    const db = getDb();
+    const { ashramSchoolCode, batchId, applications } = req.body;
+
+    if (!Array.isArray(applications) || applications.length === 0) {
+      res.status(400).json({ success: false, message: 'Invalid or empty applications batch' });
+      return;
+    }
+
+    const schoolCode = ashramSchoolCode || 'EMRS-ASHRAM-DEFAULT';
+    const effectiveBatchId = batchId || `BATCH-${Date.now()}`;
+    const syncedRecords: any[] = [];
+
+    const insertApp = db.prepare(`
+      INSERT INTO applications (
+        id, applicant_id, scheme_id, academic_year, status, current_stage,
+        submitted_at, form_data, explainable_status, deficiency_reason
+      ) VALUES (?, ?, ?, ?, 'SUBMITTED', 'INSTITUTE_VERIFICATION', datetime('now'), ?, 'Synced from Ashram School Offline Queue', NULL)
+    `);
+
+    for (const item of applications) {
+      const appId = uid('app');
+      const applicantId = item.applicantId || 'app-user-01';
+      const schemeId = item.schemeId || 'scheme-pre-matric';
+      const formData = typeof item.formData === 'string' ? item.formData : JSON.stringify({
+        ...item.formData,
+        ashramSchoolCode: schoolCode,
+        offlineSyncSource: 'MESH_BATCH_PWA'
+      });
+
+      insertApp.run(
+        appId,
+        applicantId,
+        schemeId,
+        item.academicYear || '2026-2027',
+        formData
+      );
+
+      // Audit log
+      db.prepare(`
+        INSERT INTO audit_logs (id, entity_type, entity_id, actor, action, details)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(
+        uid('audit'),
+        'APPLICATION',
+        appId,
+        'ASHRAM_SCHOOL_OFFLINE_SYNC',
+        'BATCH_INGESTION',
+        `Application synced from remote Ashram School ${schoolCode} via offline batch ${effectiveBatchId}.`
+      );
+
+      syncedRecords.push({
+        localId: item.localId || appId,
+        serverAppId: appId,
+        status: 'SYNCED_AND_QUEUED_FOR_INO',
+        studentName: item.studentName || item.formData?.applicantName || 'Ashram Student'
+      });
+    }
+
+    res.json({
+      success: true,
+      batchId: effectiveBatchId,
+      ashramSchoolCode: schoolCode,
+      syncedCount: syncedRecords.length,
+      syncedRecords,
+      syncTimestamp: new Date().toISOString(),
+      message: `Successfully ingested ${syncedRecords.length} offline applications from Ashram School ${schoolCode} into MoTA central registry.`
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};

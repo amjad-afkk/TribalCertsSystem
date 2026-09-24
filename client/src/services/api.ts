@@ -163,6 +163,13 @@ export const api = {
       body: JSON.stringify(payload)
     });
   },
+  batchSyncApplications: async (payload: { ashramSchoolCode?: string; batchId?: string; applications: any[] }) => {
+    return safeFetch('/applications/batch-sync', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+  },
 
   // Verification review
   reviewApplication: async (id: string, payload: any) => {
