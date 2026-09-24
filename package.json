@@ -4,11 +4,19 @@
   "private": true,
   "description": "AI-Enabled Unified Scholarship and Fellowship Management System for MoTA (SIH)",
   "scripts": {
+    "start": "node --experimental-sqlite server/dist/index.js",
     "dev:server": "npm --prefix server run dev",
     "dev:client": "npm --prefix client run dev",
     "test": "npm --prefix server test",
     "build": "npm --prefix server run build && npm --prefix client run build",
     "seed": "npm --prefix server run seed"
+  },
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "engines": {
+    "node": ">=22.5.0"
   },
   "keywords": ["sih", "mota", "scholarship", "fellowship", "ai", "gemini"],
   "author": "SIH Team",
