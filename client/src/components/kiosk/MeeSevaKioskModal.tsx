@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import {
   ShieldAlert, ShieldCheck, Building2, CheckCircle2,
@@ -10,15 +10,27 @@ interface MeeSevaKioskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  isAuthorizedMode?: boolean;
+  onToggleAuthorizedMode?: () => void;
 }
 
 export const MeeSevaKioskModal: React.FC<MeeSevaKioskModalProps> = ({
   isOpen,
   onClose,
-  onSuccess
+  onSuccess,
+  isAuthorizedMode,
+  onToggleAuthorizedMode
 }) => {
   // Demo Network Toggle: 'AUTHORIZED_SWAN' vs 'PUBLIC_INTERNET'
-  const [networkMode, setNetworkMode] = useState<'AUTHORIZED_SWAN' | 'PUBLIC_INTERNET'>('AUTHORIZED_SWAN');
+  const [networkMode, setNetworkMode] = useState<'AUTHORIZED_SWAN' | 'PUBLIC_INTERNET'>(
+    isAuthorizedMode !== undefined ? (isAuthorizedMode ? 'AUTHORIZED_SWAN' : 'PUBLIC_INTERNET') : 'AUTHORIZED_SWAN'
+  );
+
+  useEffect(() => {
+    if (isAuthorizedMode !== undefined) {
+      setNetworkMode(isAuthorizedMode ? 'AUTHORIZED_SWAN' : 'PUBLIC_INTERNET');
+    }
+  }, [isAuthorizedMode]);
 
   // Form Fields
   const [studentName, setStudentName] = useState('Kailash Maravi');
@@ -315,7 +327,11 @@ export const MeeSevaKioskModal: React.FC<MeeSevaKioskModalProps> = ({
             <button
               type="button"
               onClick={() => {
-                setNetworkMode(prev => prev === 'AUTHORIZED_SWAN' ? 'PUBLIC_INTERNET' : 'AUTHORIZED_SWAN');
+                if (onToggleAuthorizedMode) {
+                  onToggleAuthorizedMode();
+                } else {
+                  setNetworkMode(prev => prev === 'AUTHORIZED_SWAN' ? 'PUBLIC_INTERNET' : 'AUTHORIZED_SWAN');
+                }
                 setCorsError(null);
                 setReceipt(null);
                 setUdidError(null);

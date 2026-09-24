@@ -82,6 +82,19 @@ export const App: React.FC = () => {
   const [hasActiveFellowship, setHasActiveFellowship] = useState<boolean>(false);
   const [isKioskModalOpen, setIsKioskModalOpen] = useState<boolean>(false);
 
+  // Global Authorized Network Mode: OFF (Public Internet) vs ON (MeeSeva SWAN Intranet)
+  const [isAuthorizedMode, setIsAuthorizedMode] = useState<boolean>(() => {
+    return localStorage.getItem('mota_authorized_network') === 'true';
+  });
+
+  const handleToggleAuthorizedMode = () => {
+    setIsAuthorizedMode(prev => {
+      const nextVal = !prev;
+      localStorage.setItem('mota_authorized_network', String(nextVal));
+      return nextVal;
+    });
+  };
+
   // Synchronize active role with API client for RBAC headers
   useEffect(() => {
     if (currentUser) {
@@ -340,6 +353,8 @@ export const App: React.FC = () => {
         unreadNotifsCount={unreadNotifsCount}
         hasActiveFellowship={hasActiveFellowship}
         onOpenKioskModal={() => setIsKioskModalOpen(true)}
+        isAuthorizedMode={isAuthorizedMode}
+        onToggleAuthorizedMode={handleToggleAuthorizedMode}
       />
 
       {/* Main Content Area */}
@@ -351,6 +366,8 @@ export const App: React.FC = () => {
               <LandingLoginPage
                 onLoginSuccess={handleLoginSuccess}
                 onExploreSimulator={() => setCurrentTab('simulator')}
+                isAuthorizedMode={isAuthorizedMode}
+                onOpenKioskRegistration={() => setIsKioskModalOpen(true)}
               />
             )}
 
@@ -516,16 +533,18 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* Multilingual Conversational Floating Assistant */}
-      <RegionalChatbot
-        onSelectScheme={(code) => {
-          setDefaultApplySchemeCode(code);
-          if (!currentUser) {
-            handleSwitchPersona('applicant-pooja');
-          }
-          setIsApplyModalOpen(true);
-        }}
-      />
+      {/* Multilingual Conversational Floating Assistant: Removed from authorized logins */}
+      {!isAuthorizedMode && (!currentUser || currentUser.role === 'APPLICANT') && (
+        <RegionalChatbot
+          onSelectScheme={(code) => {
+            setDefaultApplySchemeCode(code);
+            if (!currentUser) {
+              handleSwitchPersona('applicant-pooja');
+            }
+            setIsApplyModalOpen(true);
+          }}
+        />
+      )}
 
       {/* Government SSO Authentication Modal */}
       <AuthModal
@@ -533,6 +552,7 @@ export const App: React.FC = () => {
         onClose={() => setIsAuthModalOpen(false)}
         onLoginSuccess={handleLoginSuccess}
         initialTab={authModalInitialTab}
+        isAuthorizedMode={isAuthorizedMode}
       />
 
       {/* Unified Notification Center Modal */}
@@ -546,6 +566,8 @@ export const App: React.FC = () => {
       <MeeSevaKioskModal
         isOpen={isKioskModalOpen}
         onClose={() => setIsKioskModalOpen(false)}
+        isAuthorizedMode={isAuthorizedMode}
+        onToggleAuthorizedMode={handleToggleAuthorizedMode}
       />
 
       {/* National Portal Footer */}

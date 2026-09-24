@@ -3,19 +3,24 @@ import { api } from '../../services/api';
 import type { AuthenticatedUser } from './AuthModal';
 import {
   ShieldCheck, Lock, UserCheck, KeyRound, CheckCircle,
-  RefreshCw, Sparkles, ArrowRight, Award
+  RefreshCw, Sparkles, ArrowRight, Award, Building2
 } from 'lucide-react';
 
 interface LandingLoginPageProps {
   onLoginSuccess: (user: AuthenticatedUser) => void;
   onExploreSimulator: () => void;
+  isAuthorizedMode?: boolean;
+  onOpenKioskRegistration?: () => void;
 }
 
 export const LandingLoginPage: React.FC<LandingLoginPageProps> = ({
   onLoginSuccess,
-  onExploreSimulator
+  onExploreSimulator,
+  isAuthorizedMode = false,
+  onOpenKioskRegistration
 }) => {
-  const [activeTab, setActiveTab] = useState<'citizen' | 'officer'>('citizen');
+  const [authorizedTab, setAuthorizedTab] = useState<'registration' | 'officer'>('registration');
+
 
   // Citizen Aadhaar OTP states
   const [identifier, setIdentifier] = useState('XXXX-XXXX-4123');
@@ -141,12 +146,13 @@ export const LandingLoginPage: React.FC<LandingLoginPageProps> = ({
     }
   };
 
-  const handleQuickOfficerLogin = (roleKey: 'INO' | 'STATE_NODAL' | 'COMMITTEE' | 'MOTA_ADMIN') => {
+  const handleQuickOfficerLogin = (roleKey: 'INO' | 'STATE_NODAL' | 'COMMITTEE' | 'MOTA_ADMIN' | 'KIOSK_OPERATOR') => {
     const roles: Record<string, { designation: string; id: string; pin: string }> = {
       INO: { designation: 'INO', id: 'OFFICER-INO-01', pin: '1234' },
       STATE_NODAL: { designation: 'STATE_NODAL', id: 'OFFICER-SNO-MP', pin: '1234' },
       COMMITTEE: { designation: 'COMMITTEE', id: 'OFFICER-COMM-01', pin: '1234' },
-      MOTA_ADMIN: { designation: 'MOTA_ADMIN', id: 'ADMIN-MOTA-01', pin: '1234' }
+      MOTA_ADMIN: { designation: 'MOTA_ADMIN', id: 'ADMIN-MOTA-01', pin: '1234' },
+      KIOSK_OPERATOR: { designation: 'KIOSK_OPERATOR', id: 'VLE-MEESEVA-4912', pin: '1234' }
     };
     const r = roles[roleKey];
     setDesignation(r.designation);
@@ -159,14 +165,16 @@ export const LandingLoginPage: React.FC<LandingLoginPageProps> = ({
       name:
         roleKey === 'INO' ? 'Dr. Ramesh Chandra' :
         roleKey === 'STATE_NODAL' ? 'Dr. Sunita Barik' :
-        roleKey === 'COMMITTEE' ? 'Prof. S. R. Marandi' : 'Shri A. K. Verma',
+        roleKey === 'COMMITTEE' ? 'Prof. S. R. Marandi' :
+        roleKey === 'KIOSK_OPERATOR' ? 'Shri Rajeshwar Rao' : 'Shri A. K. Verma',
       email: `${roleKey.toLowerCase()}@tribal.gov.in`,
       role: roleKey,
       isKycVerified: true,
       designationTitle:
         roleKey === 'INO' ? 'Institute Nodal Officer (Tier 1)' :
         roleKey === 'STATE_NODAL' ? 'State Nodal Officer (Tier 2)' :
-        roleKey === 'COMMITTEE' ? 'Selection Committee Chair' : 'MoTA Super Administrator'
+        roleKey === 'COMMITTEE' ? 'Selection Committee Chair' :
+        roleKey === 'KIOSK_OPERATOR' ? 'MeeSeva / CSC Authorized VLE Operator' : 'MoTA Super Administrator'
     });
   };
 
@@ -206,61 +214,92 @@ export const LandingLoginPage: React.FC<LandingLoginPageProps> = ({
         boxShadow: '0 10px 30px rgba(10, 37, 64, 0.08)',
         borderTop: '4px solid #1A4D8F'
       }}>
-        {/* Tab Switcher */}
-        <div style={{ display: 'flex', borderBottom: '2px solid #E2E8F0', marginBottom: '1.75rem' }}>
-          <button
-            type="button"
-            onClick={() => { setActiveTab('citizen'); setOtpError(null); }}
-            style={{
-              flex: 1,
-              padding: '0.75rem 1rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              color: activeTab === 'citizen' ? '#1A4D8F' : '#64748B',
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'citizen' ? '3px solid #1A4D8F' : '3px solid transparent',
-              cursor: 'pointer',
-              marginBottom: '-2px',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <UserCheck size={17} />
-            <span>Citizen / Student Login (Aadhaar OTP)</span>
-          </button>
+        {/* TAB NAVIGATION / HEADER BASED ON AUTHORIZED MODE */}
+        {!isAuthorizedMode ? (
+          /* Unauthorized Mode: ONLY Student Login */
+          <div style={{
+            borderBottom: '2px solid #E2E8F0',
+            paddingBottom: '0.85rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ width: '30px', height: '30px', borderRadius: '50%', backgroundColor: '#EBF3FC', color: '#1A4D8F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <UserCheck size={17} />
+              </div>
+              <div>
+                <strong style={{ fontSize: '1rem', color: '#0A2540' }}>
+                  Citizen & ST Student Login (Aadhaar OTP)
+                </strong>
+                <span style={{ fontSize: '0.7rem', color: '#64748B', display: 'block' }}>
+                  Public Internet Access Gateway • Direct Benefit Transfer (DBT)
+                </span>
+              </div>
+            </div>
 
-          <button
-            type="button"
-            onClick={() => { setActiveTab('officer'); setOfficerError(null); }}
-            style={{
-              flex: 1,
-              padding: '0.75rem 1rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              color: activeTab === 'officer' ? '#1A4D8F' : '#64748B',
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'officer' ? '3px solid #1A4D8F' : '3px solid transparent',
-              cursor: 'pointer',
-              marginBottom: '-2px',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <ShieldCheck size={17} />
-            <span>Official SSO (Jan Parichay)</span>
-          </button>
-        </div>
+            <span style={{ fontSize: '0.6875rem', backgroundColor: '#F1F5F9', color: '#475569', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 600 }}>
+              PUBLIC INTERNET
+            </span>
+          </div>
+        ) : (
+          /* Authorized Mode: 2 Logins (Registration and Officer SSO) */
+          <div style={{ display: 'flex', borderBottom: '2px solid #E2E8F0', marginBottom: '1.75rem' }}>
+            <button
+              type="button"
+              onClick={() => setAuthorizedTab('registration')}
+              style={{
+                flex: 1,
+                padding: '0.75rem 1rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                color: authorizedTab === 'registration' ? '#15803D' : '#64748B',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderBottom: authorizedTab === 'registration' ? '3px solid #16A34A' : '3px solid transparent',
+                cursor: 'pointer',
+                marginBottom: '-2px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Building2 size={17} style={{ color: authorizedTab === 'registration' ? '#16A34A' : '#64748B' }} />
+              <span>Assisted Registration (MeeSeva Kiosk)</span>
+            </button>
 
-        {/* Tab 1: Citizen Login */}
-        {activeTab === 'citizen' && (
+            <button
+              type="button"
+              onClick={() => { setAuthorizedTab('officer'); setOfficerError(null); }}
+              style={{
+                flex: 1,
+                padding: '0.75rem 1rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                color: authorizedTab === 'officer' ? '#1A4D8F' : '#64748B',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderBottom: authorizedTab === 'officer' ? '3px solid #1A4D8F' : '3px solid transparent',
+                cursor: 'pointer',
+                marginBottom: '-2px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <ShieldCheck size={17} style={{ color: authorizedTab === 'officer' ? '#1A4D8F' : '#64748B' }} />
+              <span>Official SSO (Jan Parichay)</span>
+            </button>
+          </div>
+        )}
+
+        {/* UNAUTHORIZED MODE: Citizen Login */}
+        {!isAuthorizedMode && (
           <div>
             {!otpSessionId ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -407,8 +446,116 @@ export const LandingLoginPage: React.FC<LandingLoginPageProps> = ({
           </div>
         )}
 
-        {/* Tab 2: Officer SSO Login */}
-        {activeTab === 'officer' && (
+        {/* AUTHORIZED MODE: Tab 1 - Assisted Registration (MeeSeva / CSC Kiosk) */}
+        {isAuthorizedMode && authorizedTab === 'registration' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{
+              backgroundColor: '#F0FDF4',
+              border: '1.5px solid #86EFAC',
+              borderRadius: '8px',
+              padding: '1.25rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Building2 size={20} style={{ color: '#16A34A' }} />
+                  <strong style={{ fontSize: '0.9375rem', color: '#166534' }}>
+                    MeeSeva & CSC Internal CORS Registration Gateway
+                  </strong>
+                </div>
+                <span style={{
+                  fontSize: '0.6875rem',
+                  backgroundColor: '#DCFCE7',
+                  color: '#166534',
+                  padding: '0.2rem 0.5rem',
+                  borderRadius: '4px',
+                  fontWeight: 700,
+                  letterSpacing: '0.04em'
+                }}>
+                  SWAN INTRANET VERIFIED
+                </span>
+              </div>
+
+              <p style={{ fontSize: '0.8125rem', color: '#166534', lineHeight: 1.5, margin: '0 0 1rem' }}>
+                Empanelled assisted onboarding terminal for Village Level Entrepreneurs (VLEs) and ITDA field operators. Provides direct, CORS-secured access to State Tribal Welfare Registries and Swavlamban UDID auto-recognition without requiring student smartphones.
+              </p>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '0.75rem',
+                backgroundColor: '#FFFFFF',
+                padding: '0.85rem',
+                borderRadius: '6px',
+                border: '1px solid #BBF7D0',
+                marginBottom: '1rem',
+                fontSize: '0.75rem'
+              }}>
+                <div>
+                  <span style={{ color: '#64748B', display: 'block' }}>Kiosk Station ID</span>
+                  <strong style={{ color: '#0A2540' }}>MS-TELANGANA-BHADRADRI-09</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748B', display: 'block' }}>VLE License</span>
+                  <strong style={{ color: '#0A2540' }}>VLE-MEESEVA-2026-TRIBAL</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748B', display: 'block' }}>Cross-Origin Route</span>
+                  <strong style={{ color: '#16A34A' }}>Whitelisted (Intranet Only)</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748B', display: 'block' }}>UDID Auto-Recognition</span>
+                  <strong style={{ color: '#16A34A' }}>Active (DEPwD Linked)</strong>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onOpenKioskRegistration ? onOpenKioskRegistration() : null}
+                className="btn btn-primary"
+                style={{
+                  width: '100%',
+                  padding: '0.8rem',
+                  justifyContent: 'center',
+                  fontSize: '0.9375rem',
+                  fontWeight: 700,
+                  backgroundColor: '#15803D',
+                  borderColor: '#166534',
+                  boxShadow: '0 4px 12px rgba(22, 101, 52, 0.25)',
+                  cursor: 'pointer'
+                }}
+              >
+                <Building2 size={18} />
+                <span>Launch MeeSeva Student Registration Terminal</span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
+
+            {/* Quick VLE Operator Portal Sign In */}
+            <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '1rem' }}>
+              <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '0.5rem', fontWeight: 600 }}>
+                Kiosk Operator Portal Access:
+              </div>
+              <button
+                type="button"
+                onClick={() => handleQuickOfficerLogin('KIOSK_OPERATOR')}
+                className="btn btn-secondary"
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.8125rem',
+                  padding: '0.6rem'
+                }}
+              >
+                <UserCheck size={16} style={{ color: '#15803D' }} />
+                <span>Sign In as Empanelled Kiosk Operator (Shri Rajeshwar Rao - VLE-4912)</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* AUTHORIZED MODE: Tab 2 - Officer SSO Login */}
+        {isAuthorizedMode && authorizedTab === 'officer' && (
           <form onSubmit={handleOfficerLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div style={{ fontSize: '0.8125rem', color: '#4A5568', lineHeight: 1.45 }}>
               Single Sign-On access for registered Government Verification Officials, Selection Committees, and MoTA Administrators.
