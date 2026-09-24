@@ -167,85 +167,87 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
 
         {/* Right Section: Authentication, Overhauled Switch & Profile */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {/* Overhauled Kiosk Button: Interactive Switch to Toggle Authorized Mode ON or OFF */}
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <button
-              type="button"
-              onClick={onToggleAuthorizedMode}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.55rem',
-                backgroundColor: isAuthorizedMode ? '#DCFCE7' : '#F1F5F9',
-                border: `1.5px solid ${isAuthorizedMode ? '#86EFAC' : '#CBD5E1'}`,
-                padding: '0.28rem 0.75rem 0.28rem 0.35rem',
-                borderRadius: '24px',
-                cursor: 'pointer',
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                boxShadow: isAuthorizedMode ? '0 0 10px rgba(34, 197, 94, 0.25)' : 'none'
-              }}
-              title={isAuthorizedMode ? "Authorized Mode Active: Empanelled SWAN Intranet. Click to toggle to Public Internet." : "Unauthorized Mode Active: Public Internet. Click to toggle to Authorized SWAN Intranet."}
-            >
-              {/* Switch Pill */}
-              <div style={{
-                width: '38px',
-                height: '22px',
-                backgroundColor: isAuthorizedMode ? '#16A34A' : '#94A3B8',
-                borderRadius: '12px',
-                position: 'relative',
-                transition: 'background-color 0.25s ease'
-              }}>
-                <div style={{
-                  width: '18px',
-                  height: '18px',
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '50%',
-                  position: 'absolute',
-                  top: '2px',
-                  left: isAuthorizedMode ? '18px' : '2px',
-                  transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                  display: 'flex',
+          {/* Overhauled Kiosk Button: Interactive Switch to Toggle Authorized Mode ON or OFF (Login screen only) */}
+          {!currentUser && (
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={onToggleAuthorizedMode}
+                style={{
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  {isAuthorizedMode ? (
-                    <ShieldCheck size={11} style={{ color: '#16A34A' }} />
-                  ) : (
-                    <Lock size={11} style={{ color: '#64748B' }} />
-                  )}
-                </div>
-              </div>
-
-              {/* Status Text */}
-              <div style={{ textAlign: 'left', lineHeight: 1.15 }}>
+                  gap: '0.55rem',
+                  backgroundColor: isAuthorizedMode ? '#DCFCE7' : '#F1F5F9',
+                  border: `1.5px solid ${isAuthorizedMode ? '#86EFAC' : '#CBD5E1'}`,
+                  padding: '0.28rem 0.75rem 0.28rem 0.35rem',
+                  borderRadius: '24px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: isAuthorizedMode ? '0 0 10px rgba(34, 197, 94, 0.25)' : 'none'
+                }}
+                title={isAuthorizedMode ? "Authorized Mode Active: Empanelled SWAN Intranet. Click to toggle to Public Internet." : "Unauthorized Mode Active: Public Internet. Click to toggle to Authorized SWAN Intranet."}
+              >
+                {/* Switch Pill */}
                 <div style={{
-                  fontSize: '0.6875rem',
-                  fontWeight: 700,
-                  color: isAuthorizedMode ? '#15803D' : '#475569',
-                  letterSpacing: '0.02em',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.3rem'
+                  width: '38px',
+                  height: '22px',
+                  backgroundColor: isAuthorizedMode ? '#16A34A' : '#94A3B8',
+                  borderRadius: '12px',
+                  position: 'relative',
+                  transition: 'background-color 0.25s ease'
                 }}>
-                  <span>{isAuthorizedMode ? 'AUTHORIZED MODE' : 'UNAUTHORIZED'}</span>
-                  <span style={{
-                    fontSize: '0.6rem',
-                    fontWeight: 800,
-                    padding: '0.1rem 0.35rem',
-                    borderRadius: '10px',
-                    backgroundColor: isAuthorizedMode ? '#16A34A' : '#64748B',
-                    color: '#FFFFFF'
+                  <div style={{
+                    width: '18px',
+                    height: '18px',
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '50%',
+                    position: 'absolute',
+                    top: '2px',
+                    left: isAuthorizedMode ? '18px' : '2px',
+                    transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}>
-                    {isAuthorizedMode ? 'ON' : 'OFF'}
-                  </span>
+                    {isAuthorizedMode ? (
+                      <ShieldCheck size={11} style={{ color: '#16A34A' }} />
+                    ) : (
+                      <Lock size={11} style={{ color: '#64748B' }} />
+                    )}
+                  </div>
                 </div>
-                <div style={{ fontSize: '0.625rem', color: isAuthorizedMode ? '#166534' : '#64748B' }}>
-                  {isAuthorizedMode ? 'MeeSeva SWAN Intranet' : 'Public Internet (Citizen)'}
+
+                {/* Status Text */}
+                <div style={{ textAlign: 'left', lineHeight: 1.15 }}>
+                  <div style={{
+                    fontSize: '0.6875rem',
+                    fontWeight: 700,
+                    color: isAuthorizedMode ? '#15803D' : '#475569',
+                    letterSpacing: '0.02em',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem'
+                  }}>
+                    <span>{isAuthorizedMode ? 'AUTHORIZED MODE' : 'UNAUTHORIZED'}</span>
+                    <span style={{
+                      fontSize: '0.6rem',
+                      fontWeight: 800,
+                      padding: '0.1rem 0.35rem',
+                      borderRadius: '10px',
+                      backgroundColor: isAuthorizedMode ? '#16A34A' : '#64748B',
+                      color: '#FFFFFF'
+                    }}>
+                      {isAuthorizedMode ? 'ON' : 'OFF'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.625rem', color: isAuthorizedMode ? '#166534' : '#64748B' }}>
+                    {isAuthorizedMode ? 'MeeSeva SWAN Intranet' : 'Public Internet (Citizen)'}
+                  </div>
                 </div>
-              </div>
-            </button>
-          </div>
+              </button>
+            </div>
+          )}
 
           {!currentUser ? (
             /* Logins based on Authorized Mode */
