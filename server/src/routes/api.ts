@@ -15,7 +15,7 @@ import {
   runNosSelectionSimulation,
   signOffSelection
 } from '../controllers/selectionController.js';
-import { getMoTaAnalytics } from '../controllers/analyticsController.js';
+import { getMoTaAnalytics, dispatchMobileVan } from '../controllers/analyticsController.js';
 import { sendOtp, verifyOtp, officerLogin } from '../controllers/authController.js';
 import {
   getFellowshipRecord,
@@ -108,6 +108,7 @@ router.post('/selection/sign-off', requireRoles(['COMMITTEE', 'MOTA_ADMIN']), va
 
 // MoTA Analytics & Heatmaps (Restricted to Officers & Administrators)
 router.get('/analytics', requireRoles(['INO', 'STATE_NODAL', 'COMMITTEE', 'MOTA_ADMIN']), getMoTaAnalytics);
+router.post('/analytics/dispatch-van', requireRoles(['INO', 'STATE_NODAL', 'COMMITTEE', 'MOTA_ADMIN']), dispatchMobileVan);
 
 
 // Applicant profiles list for demo switching

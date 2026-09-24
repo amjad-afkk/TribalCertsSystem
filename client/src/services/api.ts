@@ -214,6 +214,13 @@ export const api = {
   getAnalytics: async () => {
     return safeFetch('/analytics', { headers: getHeaders() });
   },
+  dispatchMobileVan: async (payload: { district: string; blocks?: string }) => {
+    return safeFetch('/analytics/dispatch-van', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+  },
 
   // Applicants
   getApplicants: async () => {

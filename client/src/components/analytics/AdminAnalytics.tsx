@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
-import { BarChart3, Users, RefreshCw } from 'lucide-react';
+import { BarChart3, Users, RefreshCw, Radio, Truck, AlertOctagon, CheckCircle2, MapPin } from 'lucide-react';
 
 export const AdminAnalytics: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<any | null>(null);
+  const [dispatchingDistrict, setDispatchingDistrict] = useState<string | null>(null);
+  const [dispatchedDistricts, setDispatchedDistricts] = useState<Record<string, string>>({});
 
   const loadData = async () => {
     setLoading(true);
@@ -17,6 +19,23 @@ export const AdminAnalytics: React.FC = () => {
       console.error('Analytics load error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDispatchVan = async (district: string, blocks?: string) => {
+    setDispatchingDistrict(district);
+    try {
+      const resp = await api.dispatchMobileVan({ district, blocks });
+      if (resp.success) {
+        setDispatchedDistricts(prev => ({
+          ...prev,
+          [district]: resp.dispatchId
+        }));
+      }
+    } catch (err) {
+      console.error('Van dispatch error:', err);
+    } finally {
+      setDispatchingDistrict(null);
     }
   };
 
@@ -33,7 +52,7 @@ export const AdminAnalytics: React.FC = () => {
     );
   }
 
-  const { summary, bottleneckAnalytics, deficiencyHeatmap, inclusionMetrics } = analytics;
+  const { summary, bottleneckAnalytics, deficiencyHeatmap, inclusionMetrics, districtSaturationRadar } = analytics;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -90,6 +109,158 @@ export const AdminAnalytics: React.FC = () => {
             {summary.totalDeficiencyFlagged.toLocaleString()}
           </h3>
           <span style={{ fontSize: '0.6875rem', color: '#176529' }}>82% Resolved Post-Resubmission</span>
+        </div>
+      </div>
+
+      {/* SECTION: Tribal Saturation GIS Radar & District Saturation Index (DSI) */}
+      <div className="gov-card" style={{ borderLeft: '4px solid #0D9488' }}>
+        <div className="gov-card-header">
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+              <Radio size={20} style={{ color: '#0D9488' }} />
+              <h3 style={{ fontSize: '1.125rem', color: '#0A2540', margin: 0 }}>
+                Tribal Saturation GIS Radar (District Saturation Index - DSI Heatmap)
+              </h3>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: '#64748B', margin: 0 }}>
+              Real-time geospatial saturation tracking across Scheduled Areas. Dispatches Mobile CSC Vans to acute Cold Spots (&lt; 35% DSI) before scheme closure.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, backgroundColor: '#CCFBF1', color: '#0F766E', padding: '0.25rem 0.65rem', borderRadius: '4px' }}>
+              National Mean DSI: {summary.averageDsiPercent || 55}%
+            </span>
+          </div>
+        </div>
+
+        {/* District Saturation Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+          {(districtSaturationRadar || []).map((d: any) => {
+            const isColdSpot = d.status === 'COLD_SPOT';
+            const isSaturated = d.status === 'SATURATED';
+            const dispatchId = dispatchedDistricts[d.district];
+
+            return (
+              <div
+                key={d.district}
+                style={{
+                  padding: '1rem',
+                  borderRadius: '6px',
+                  border: `1px solid ${isColdSpot ? '#FECACA' : isSaturated ? '#BBF7D0' : '#E2E8F0'}`,
+                  backgroundColor: isColdSpot ? '#FFFBFB' : isSaturated ? '#F0FDF4' : '#FFFFFF',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <MapPin size={15} style={{ color: isColdSpot ? '#DC2626' : isSaturated ? '#16A34A' : '#1A4D8F' }} />
+                      <strong style={{ fontSize: '0.9375rem', color: '#0A2540' }}>{d.district}</strong>
+                      <span style={{ fontSize: '0.75rem', color: '#64748B' }}>({d.state})</span>
+                    </div>
+                    <div style={{ fontSize: '0.6875rem', color: '#475569', marginTop: '0.15rem' }}>
+                      Tribe: <em>{d.dominantTribe}</em>
+                    </div>
+                  </div>
+
+                  <span style={{
+                    fontSize: '0.6875rem',
+                    fontWeight: 700,
+                    padding: '0.2rem 0.5rem',
+                    borderRadius: '4px',
+                    backgroundColor: isColdSpot ? '#FDF0ED' : isSaturated ? '#DCFCE7' : '#FEF3C7',
+                    color: isColdSpot ? '#B91C1C' : isSaturated ? '#15803D' : '#B45309'
+                  }}>
+                    {isColdSpot ? 'COLD SPOT' : isSaturated ? 'SATURATED' : 'MODERATE'}
+                  </span>
+                </div>
+
+                {/* DSI Gauge Progress Bar */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                    <span style={{ color: '#64748B' }}>DSI Saturation:</span>
+                    <strong style={{ color: isColdSpot ? '#DC2626' : isSaturated ? '#16A34A' : '#0A2540' }}>
+                      {d.dsiPercent}%
+                    </strong>
+                  </div>
+                  <div style={{ width: '100%', height: '8px', backgroundColor: '#E2E8F0', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        width: `${Math.min(100, d.dsiPercent)}%`,
+                        height: '100%',
+                        backgroundColor: isColdSpot ? '#DC2626' : isSaturated ? '#16A34A' : '#F59E0B',
+                        borderRadius: '4px',
+                        transition: 'width 0.4s ease'
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: '#94A3B8', marginTop: '0.2rem' }}>
+                    <span>Beneficiaries: {Number(d.actualBeneficiaries).toLocaleString('en-IN')}</span>
+                    <span>Census Base: {Number(d.eligibleStStudents).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+
+                {/* Policy Recommendation & Action */}
+                <div style={{
+                  fontSize: '0.75rem',
+                  color: isColdSpot ? '#991B1B' : '#334155',
+                  backgroundColor: isColdSpot ? '#FEF2F2' : '#F8FAFC',
+                  padding: '0.5rem 0.65rem',
+                  borderRadius: '4px',
+                  lineHeight: 1.4
+                }}>
+                  {isColdSpot && <AlertOctagon size={13} style={{ display: 'inline', marginRight: '0.3rem', color: '#DC2626', verticalAlign: '-2px' }} />}
+                  {d.recommendedAction}
+                </div>
+
+                {/* 1-Click Mobile CSC Van Dispatch Button for Cold Spots */}
+                {isColdSpot && (
+                  <div>
+                    {dispatchId ? (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        color: '#166534',
+                        backgroundColor: '#DCFCE7',
+                        padding: '0.4rem 0.6rem',
+                        borderRadius: '4px'
+                      }}>
+                        <CheckCircle2 size={14} style={{ color: '#16A34A' }} />
+                        Mobile CSC Van Dispatched ({dispatchId})
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleDispatchVan(d.district)}
+                        disabled={dispatchingDistrict === d.district}
+                        className="btn btn-primary btn-sm"
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.4rem',
+                          backgroundColor: '#B91C1C',
+                          borderColor: '#B91C1C',
+                          fontSize: '0.75rem',
+                          padding: '0.4rem 0.75rem'
+                        }}
+                      >
+                        <Truck size={14} />
+                        {dispatchingDistrict === d.district ? 'Dispatching Field Unit...' : 'Dispatch Mobile CSC Outreach Van'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
