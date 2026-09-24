@@ -113,6 +113,34 @@ export const api = {
     });
   },
 
+  // AISHE Directory & Institutional Anti-Scam Shield
+  searchInstitutes: async (query: string = '') => {
+    return safeFetch(`/institutes/search?q=${encodeURIComponent(query)}`, { headers: getHeaders() });
+  },
+  validateAisheCode: async (aisheCode: string) => {
+    return safeFetch('/institutes/validate', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ aisheCode })
+    });
+  },
+  calculateEscrowPlan: async (payload: { schemeCode: string; totalAwardAmount: number; aisheCode: string; aadhaarMasked?: string }) => {
+    return safeFetch('/institutes/escrow-routing', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+  },
+
+  // Voice-First Jan-Jatiya Sahayak & Explainable Deficiency
+  getSahayakGuidance: async (payload: { deficiencyText: string; applicantName: string; language: string }) => {
+    return safeFetch('/deficiency/sahayak', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+  },
+
   // Applications
   getApplications: async (params?: Record<string, string>) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';

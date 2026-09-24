@@ -23,6 +23,12 @@ import {
   submitContinuationReport,
   submitThesis
 } from '../controllers/fellowshipController.js';
+import {
+  searchInstitutes,
+  validateAisheCode,
+  calculateEscrowPlan,
+  getSahayakGuidance
+} from '../controllers/institutionController.js';
 import { getDigiLockerDocuments, verifyCertificateRegistry } from '../controllers/digilockerController.js';
 import { getNotifications, markNotificationRead, sendTestNudge } from '../controllers/notificationController.js';
 import { getDb } from '../db/connection.js';
@@ -64,6 +70,14 @@ router.post('/schemes', requireRoles(['MOTA_ADMIN']), validateBody(schemas.creat
 // Scholarship Twin Simulator (Open citizen self-service)
 router.post('/simulator/match', validateBody(schemas.simulatorMatch), runSimulator);
 router.post('/simulator/roadmap', getCareerRoadmap);
+
+// AISHE Directory & Institutional Anti-Scam Shield
+router.get('/institutes/search', searchInstitutes);
+router.post('/institutes/validate', validateAisheCode);
+router.post('/institutes/escrow-routing', calculateEscrowPlan);
+
+// Voice-First Jan-Jatiya Sahayak & Explainable Deficiency Resolver
+router.post('/deficiency/sahayak', getSahayakGuidance);
 
 // Applications
 router.get('/applications', getApplications);
