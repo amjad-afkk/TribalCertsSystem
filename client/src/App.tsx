@@ -77,6 +77,7 @@ export const App: React.FC = () => {
   const [isApplyModalOpen, setIsApplyModalOpen] = useState<boolean>(false);
   const [defaultApplySchemeCode, setDefaultApplySchemeCode] = useState<string | undefined>(undefined);
   const [applicants, setApplicants] = useState<Applicant[]>([]);
+  const [hasActiveFellowship, setHasActiveFellowship] = useState<boolean>(false);
 
   // Synchronize active role with API client for RBAC headers
   useEffect(() => {
@@ -123,6 +124,23 @@ export const App: React.FC = () => {
     fetchApplicants();
   }, []);
 
+  // Check if current applicant has an active fellowship record (NFST)
+  useEffect(() => {
+    const checkFellowship = async () => {
+      if (!currentUser || currentUser.role !== 'APPLICANT') {
+        setHasActiveFellowship(false);
+        return;
+      }
+      try {
+        const resp = await api.getFellowshipRecord(currentUser.id);
+        setHasActiveFellowship(resp.success === true && resp.data != null);
+      } catch {
+        setHasActiveFellowship(false);
+      }
+    };
+    checkFellowship();
+  }, [currentUser]);
+
   // Open Auth Modal
   const handleOpenLogin = (initialTab?: 'citizen' | 'officer') => {
     setAuthModalInitialTab(initialTab || 'citizen');
@@ -135,6 +153,7 @@ export const App: React.FC = () => {
     setCurrentRole('guest');
     setApiRole('guest');
     setCurrentTab('login');
+    setHasActiveFellowship(false);
   };
 
   // Handle successful login
@@ -302,6 +321,7 @@ export const App: React.FC = () => {
         onLogout={handleLogout}
         onOpenNotifications={() => setIsNotificationModalOpen(true)}
         unreadNotifsCount={unreadNotifsCount}
+        hasActiveFellowship={hasActiveFellowship}
       />
 
       {/* Main Content Area */}
@@ -328,7 +348,7 @@ export const App: React.FC = () => {
             )}
 
             {/* Authenticated Citizen Fellowship Lifecycle */}
-            {currentUser && currentTab === 'fellowship' && (
+            {currentUser && currentTab === 'fellowship' && hasActiveFellowship && (
               <FellowshipPortal applicantId={activeApplicantId} />
             )}
 

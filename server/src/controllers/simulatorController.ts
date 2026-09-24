@@ -28,8 +28,8 @@ export const runSimulator = (req: Request, res: Response) => {
       academicPercentage: criteria.academicPercentage,
       annualIncome: criteria.annualIncome,
       age: criteria.age || 22,
-      isPwD: criteria.isPwD,
-      isPVTG: criteria.isPVTG
+      isPwD: criteria.isPwD ?? false,
+      isPVTG: criteria.isPVTG ?? false
     });
 
     res.json({

@@ -28,6 +28,7 @@ interface GovHeaderProps {
   onLogout: () => void;
   onOpenNotifications: () => void;
   unreadNotifsCount?: number;
+  hasActiveFellowship?: boolean;
 }
 
 export const GovHeader: React.FC<GovHeaderProps> = ({
@@ -37,7 +38,8 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
   onOpenLogin,
   onLogout,
   onOpenNotifications,
-  unreadNotifsCount = 0
+  unreadNotifsCount = 0,
+  hasActiveFellowship = false
 }) => {
   const role = currentUser?.role || 'APPLICANT';
 
@@ -118,12 +120,16 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
         ];
 
       case 'APPLICANT':
-      default:
-        return [
+      default: {
+        const tabs = [
           { id: 'applicant', label: 'My Applications', icon: UserCheck },
-          { id: 'simulator', label: 'Eligibility Simulator', icon: Sparkles },
-          { id: 'fellowship', label: 'Fellowship Lifecycle (NFST)', icon: Award }
+          { id: 'simulator', label: 'Eligibility Simulator', icon: Sparkles }
         ];
+        if (hasActiveFellowship) {
+          tabs.push({ id: 'fellowship', label: 'Fellowship Lifecycle (NFST)', icon: Award });
+        }
+        return tabs;
+      }
     }
   };
 
