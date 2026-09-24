@@ -32,6 +32,8 @@ export interface WaterfallTierConfig {
   priority: number;
   allocatedSlots?: number;
   spilloverTargetTier?: string;
+  allocatedBudget?: number;
+  unitCostPerAwardee?: number;
 }
 
 export interface Scheme {

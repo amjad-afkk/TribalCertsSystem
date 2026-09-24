@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
-import { GitFork, ArrowRight, Play, RefreshCw } from 'lucide-react';
+import { GitFork, ArrowRight, Play, RefreshCw, Banknote, ShieldCheck, AlertCircle } from 'lucide-react';
 
 interface TierData {
   tierName: string;
@@ -11,22 +11,40 @@ interface TierData {
   spilloverOut: number;
 }
 
+interface TierBudgetData {
+  tierName: string;
+  sanctionedBudget: number;
+  unitCost: number;
+  budgetReceivedFromSpillover: number;
+  effectiveBudget: number;
+  committedExpenditure: number;
+  budgetSpilledOverOut: number;
+  unspentSurplus: number;
+}
+
 interface TransitionData {
   step: number;
   fromTier: string;
   toTier: string;
   slotsShifted: number;
+  budgetShifted?: number;
   reason: string;
 }
 
 export const SpilloverVisualizer: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'dual' | 'slots'>('dual');
   const [data, setData] = useState<{
     totalAvailableSlots: number;
     totalFilledSlots: number;
     unfilledSlots: number;
+    totalSanctionedBudget?: number;
+    totalCommittedExpenditure?: number;
+    totalBudgetSurplus?: number;
+    isBudgetConstrained?: boolean;
     tierSummary: Record<string, TierData>;
+    tierBudgetSummary?: Record<string, TierBudgetData>;
     transitions: TransitionData[];
     allocatedSelections: any[];
   } | null>(null);
@@ -143,26 +161,112 @@ export const SpilloverVisualizer: React.FC = () => {
         <>
           {/* Waterfall Cascade Graphic */}
           <div className="gov-card" style={{ padding: '1.75rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ fontSize: '1rem', color: '#0A2540' }}>
-                Interactive Waterfall Cascade State (Step {activeStep} of {data.transitions.length})
-              </h3>
-              <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8125rem' }}>
-                <span>Total Seats: <strong>{data.totalAvailableSlots}</strong></span>
-                <span>Allocated: <strong style={{ color: '#1B7837' }}>{data.totalFilledSlots}</strong></span>
-                <span>Spillover Transitions: <strong>{data.transitions.length}</strong></span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.05rem', color: '#0A2540', marginBottom: '0.25rem' }}>
+                  Interactive Waterfall Cascade State (Step {activeStep} of {data.transitions.length})
+                </h3>
+                <span style={{ fontSize: '0.75rem', color: '#718096', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <ShieldCheck size={14} style={{ color: '#1B7837' }} />
+                  Dual-Constraint Algorithm: General Financial Rules (GFR Rule 10 Virement) + Merit Quota
+                </span>
+              </div>
+
+              {/* View Mode Toggle */}
+              <div style={{ display: 'flex', backgroundColor: '#F1F5F9', borderRadius: '6px', padding: '0.25rem', gap: '0.25rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('dual')}
+                  style={{
+                    padding: '0.35rem 0.75rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    borderRadius: '4px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: viewMode === 'dual' ? '#1A4D8F' : 'transparent',
+                    color: viewMode === 'dual' ? '#FFFFFF' : '#4A5568'
+                  }}
+                >
+                  Dual-Constraint (Slots + Budget)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('slots')}
+                  style={{
+                    padding: '0.35rem 0.75rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    borderRadius: '4px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: viewMode === 'slots' ? '#1A4D8F' : 'transparent',
+                    color: viewMode === 'slots' ? '#FFFFFF' : '#4A5568'
+                  }}
+                >
+                  Slots Only
+                </button>
+              </div>
+            </div>
+
+            {/* High-Level Dual Metric Banner */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '1rem',
+              backgroundColor: '#F8FAFC',
+              border: '1px solid #E2E8F0',
+              borderRadius: '6px',
+              padding: '1rem 1.25rem',
+              marginBottom: '1.5rem'
+            }}>
+              <div>
+                <div style={{ fontSize: '0.6875rem', color: '#718096', textTransform: 'uppercase', fontWeight: 600 }}>Total Available Seats</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0A2540' }}>{data.totalAvailableSlots} Slots</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.6875rem', color: '#718096', textTransform: 'uppercase', fontWeight: 600 }}>Allocated Seats</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1B7837' }}>{data.totalFilledSlots} Filled</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.6875rem', color: '#718096', textTransform: 'uppercase', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Banknote size={13} style={{ color: '#1A4D8F' }} /> Sanctioned Fiscal Budget
+                </div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1A4D8F' }}>
+                  ₹{((data.totalSanctionedBudget || 363612000) / 10000000).toFixed(2)} Cr
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.6875rem', color: '#718096', textTransform: 'uppercase', fontWeight: 600 }}>Committed Expenditure</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#7C3AED' }}>
+                  ₹{((data.totalCommittedExpenditure || 0) / 10000000).toFixed(2)} Cr
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.6875rem', color: '#718096', textTransform: 'uppercase', fontWeight: 600 }}>Fiscal Surplus / Buffer</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0D9488' }}>
+                  ₹{((data.totalBudgetSurplus || 0) / 100000).toFixed(1)} L
+                </div>
+                {data.isBudgetConstrained && (
+                  <div style={{ fontSize: '0.6875rem', color: '#B91C1C', display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
+                    <AlertCircle size={11} /> Fiscal ceiling active
+                  </div>
+                )}
               </div>
             </div>
 
             {/* 4 Tier Blocks with Flow Connectors */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', position: 'relative' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', position: 'relative' }}>
               {tiers.map((t, idx) => {
                 const summary = data.tierSummary[t.key];
+                const bSummary = data.tierBudgetSummary?.[t.key];
                 const isStepActive = activeStep >= idx;
                 const receivedSpillover = isStepActive && summary ? summary.spilloverReceived : 0;
                 const effectiveQuota = (summary?.originalQuota || t.base) + receivedSpillover;
                 const filled = isStepActive && summary ? summary.selectedCount : 0;
                 const spilledOut = isStepActive && summary ? summary.spilloverOut : 0;
+                const committedExp = isStepActive && bSummary ? bSummary.committedExpenditure : 0;
+                const spilledBudget = isStepActive && bSummary ? bSummary.budgetSpilledOverOut : 0;
 
                 return (
                   <div
@@ -176,10 +280,17 @@ export const SpilloverVisualizer: React.FC = () => {
                       transition: 'all 0.4s ease'
                     }}
                   >
-                    <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: t.color, textTransform: 'uppercase', marginBottom: '0.25rem' }}>
-                      Tier {idx + 1}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: t.color, textTransform: 'uppercase' }}>
+                        Tier {idx + 1}
+                      </span>
+                      {bSummary && (
+                        <span style={{ fontSize: '0.625rem', backgroundColor: '#F1F5F9', padding: '0.15rem 0.4rem', borderRadius: '3px', color: '#475569', fontWeight: 600 }}>
+                          ₹{(bSummary.unitCost / 100000).toFixed(2)}L / scholar
+                        </span>
+                      )}
                     </div>
-                    <h4 style={{ fontSize: '0.9375rem', color: '#0A2540', marginBottom: '0.75rem', height: '2.5rem' }}>
+                    <h4 style={{ fontSize: '0.9375rem', color: '#0A2540', marginBottom: '0.75rem', minHeight: '2.5rem' }}>
                       {summary?.tierName || t.label}
                     </h4>
 
@@ -190,7 +301,7 @@ export const SpilloverVisualizer: React.FC = () => {
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '0.25rem' }}>
-                        <span style={{ color: '#718096' }}>Spillover In:</span>
+                        <span style={{ color: '#718096' }}>Seat Spillover In:</span>
                         <strong style={{ color: receivedSpillover > 0 ? '#1B7837' : '#4A5568' }}>
                           +{receivedSpillover}
                         </strong>
@@ -206,10 +317,24 @@ export const SpilloverVisualizer: React.FC = () => {
                         <strong style={{ color: '#1A4D8F' }}>{filled}</strong>
                       </div>
 
+                      {/* Financial Metrics in Dual Mode */}
+                      {viewMode === 'dual' && bSummary && (
+                        <div style={{ marginTop: '0.4rem', paddingTop: '0.4rem', borderTop: '1px dashed #CBD5E1', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: '#64748B', fontSize: '0.75rem' }}>Effective Budget:</span>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>₹{(bSummary.effectiveBudget / 100000).toFixed(1)}L</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: '#64748B', fontSize: '0.75rem' }}>Committed Spend:</span>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#7C3AED' }}>₹{(committedExp / 100000).toFixed(1)}L</span>
+                          </div>
+                        </div>
+                      )}
+
                       {spilledOut > 0 && isStepActive && (
                         <div style={{
                           marginTop: '0.5rem',
-                          padding: '0.35rem 0.5rem',
+                          padding: '0.4rem 0.5rem',
                           borderRadius: '4px',
                           backgroundColor: '#FFF8E6',
                           border: '1px solid #FCD680',
@@ -219,7 +344,12 @@ export const SpilloverVisualizer: React.FC = () => {
                           alignItems: 'center',
                           gap: '0.35rem'
                         }}>
-                          <ArrowRight size={14} /> {idx < tiers.length - 1 ? `Cascading ${spilledOut} seats to Tier ${idx + 2}` : `Final statutory pool: ${spilledOut} unfilled seats open`}
+                          <ArrowRight size={14} />
+                          <span>
+                            {idx < tiers.length - 1
+                              ? `Cascading ${spilledOut} seats ${spilledBudget > 0 ? `+ ₹${(spilledBudget / 100000).toFixed(1)}L virement` : ''} to Tier ${idx + 2}`
+                              : `Final statutory pool: ${spilledOut} unfilled seats open`}
+                          </span>
                         </div>
                       )}
                     </div>
