@@ -142,4 +142,75 @@ describe('MeeSeva / CSC Assisted Kiosk Onboarding & Internal CORS Defense', () =
     const stats = KioskService.getKioskStats('MS-DINDORI-04', db);
     assert.ok(stats.totalAssistedRegistrations >= 1);
   });
+
+  test('should auto-recognize and verify UDID card against DEPwD Swavlamban standard', () => {
+    const validUdidResult = KioskService.verifyUdid(
+      { udidNumber: 'UDID-JH-08-2021-99812', studentName: 'Kailash Birhor' },
+      db
+    );
+
+    assert.ok(validUdidResult);
+    assert.strictEqual(validUdidResult.udidNumber, 'UDID-JH-08-2021-99812');
+    assert.strictEqual(validUdidResult.swavlambanStatus, 'VERIFIED_ACTIVE');
+    assert.strictEqual(validUdidResult.isBenchmarkDisability, true);
+    assert.ok(validUdidResult.disabilityPercentage >= 40);
+    assert.strictEqual(validUdidResult.benchmarkStatus, 'QUALIFIED_BENCHMARK_DISABILITY');
+    assert.ok(validUdidResult.entitlementSummary.includes('5% Horizontal PwD Reservation'));
+
+    // Should throw if udid is empty
+    assert.throws(() => {
+      KioskService.verifyUdid({ udidNumber: '' }, db);
+    }, /UDID certificate number is required/);
+  });
+
+  test('should onboard Divyangjan student, attach PWD_CERT document and reflect statutory disability quota', () => {
+    const divyangjanStudent = {
+      studentName: 'Kailash Birhor',
+      aadhaarMasked: 'XXXX-XXXX-8821',
+      category: 'DIVYANGJAN' as const,
+      gender: 'MALE' as const,
+      annualIncome: 95000,
+      state: 'Jharkhand',
+      district: 'Hazaribagh',
+      schemeCode: 'BPVGK',
+      instituteName: 'Government Tribal Welfare High School, Hazaribagh',
+      kioskCenterId: 'MS-HAZARIBAGH-01',
+      vleOperatorId: 'VLE-JH-8812',
+      biometricVerified: true,
+      udidNumber: 'UDID-JH-08-2021-99812',
+      disabilityPercentage: 45,
+      disabilityType: 'Locomotor Disability',
+      udidVerified: true
+    };
+
+    const receipt = KioskService.onboardStudent(divyangjanStudent, 'https://kiosk.meeseva.gov.in', db);
+
+    assert.ok(receipt);
+    assert.strictEqual(receipt.udidNumber, 'UDID-JH-08-2021-99812');
+    assert.strictEqual(receipt.disabilityPercentage, 45);
+    assert.strictEqual(receipt.disabilityType, 'Locomotor Disability');
+    assert.ok(receipt.entitlement.includes('Special Divyangjan Conveyance Allowance'));
+
+    // Verify applicant is_pwd flag is set to 1
+    const applicantRow = db.prepare('SELECT * FROM applicants WHERE id = ?').get(receipt.studentId) as any;
+    assert.ok(applicantRow);
+    assert.strictEqual(applicantRow.is_pwd, 1);
+    assert.strictEqual(applicantRow.category, 'DIVYANGJAN');
+
+    // Verify PWD_CERT is auto-registered in documents table for scrutiny
+    const docRow = db.prepare(`
+      SELECT * FROM documents
+      WHERE application_id = ? AND doc_type = 'PWD_CERT'
+    `).get(receipt.applicationId) as any;
+
+    assert.ok(docRow, 'Auto-recognized PWD_CERT document must be created for Divyangjan application');
+    assert.strictEqual(docRow.status, 'ACCEPTED');
+    assert.ok(docRow.ocr_extracted.includes('UDID-JH-08-2021-99812'));
+    assert.ok(docRow.ocr_extracted.includes('SWAVLAMBAN_DEPWD_AUTO_RECOGNITION'));
+
+    // Verify application explainable_status includes verified UDID info
+    const appRow = db.prepare('SELECT * FROM applications WHERE id = ?').get(receipt.applicationId) as any;
+    assert.ok(appRow.explainable_status.includes('UDID-JH-08-2021-99812'));
+  });
 });
+

@@ -36,3 +36,22 @@ export const getKioskStats = (req: Request, res: Response): void => {
     });
   }
 };
+
+export const verifyKioskUdid = (req: Request, res: Response): void => {
+  try {
+    const result = KioskService.verifyUdid(req.body);
+
+    res.json({
+      success: true,
+      message: 'UDID card successfully verified against Central DEPwD Swavlamban registry.',
+      data: result
+    });
+  } catch (err: any) {
+    res.status(400).json({
+      success: false,
+      error: 'UDID_VERIFICATION_FAILED',
+      message: err.message
+    });
+  }
+};
+

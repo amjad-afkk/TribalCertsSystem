@@ -7,7 +7,7 @@ import {
   submitApplication,
   resubmitDeficiency
 } from '../controllers/applicationController.js';
-import { onboardKioskStudent, getKioskStats } from '../controllers/kioskController.js';
+import { onboardKioskStudent, getKioskStats, verifyKioskUdid } from '../controllers/kioskController.js';
 import { verifyKioskCorsAndLicense } from '../middleware/kioskSecurity.js';
 import { reviewApplication, reviewDocument } from '../controllers/verificationController.js';
 import { extractAndVerifyDocument } from '../controllers/documentController.js';
@@ -95,6 +95,7 @@ router.post('/applications/:id/resubmit', resubmitDeficiency);
 
 // MeeSeva / CSC Assisted Kiosk Student Onboarding (Internal CORS & Government Intranet Protected)
 router.post('/kiosk/onboard-student', verifyKioskCorsAndLicense, validateBody(schemas.kioskOnboardStudent), onboardKioskStudent);
+router.post('/kiosk/verify-udid', verifyKioskCorsAndLicense, validateBody(schemas.kioskVerifyUdid), verifyKioskUdid);
 router.get('/kiosk/stats', verifyKioskCorsAndLicense, getKioskStats);
 
 // Verification & Scrutiny (Restricted to Nodal & Ministry Officers)

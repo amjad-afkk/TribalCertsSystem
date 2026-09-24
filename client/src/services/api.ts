@@ -174,6 +174,16 @@ export const api = {
       body: JSON.stringify(payload)
     });
   },
+  verifyKioskUdid: async (payload: { udidNumber: string; studentName?: string }, networkHeaders?: Record<string, string>) => {
+    return safeFetch('/kiosk/verify-udid', {
+      method: 'POST',
+      headers: {
+        ...getHeaders(),
+        ...(networkHeaders || {})
+      },
+      body: JSON.stringify(payload)
+    });
+  },
   getKioskStats: async (kioskCenterId?: string, networkHeaders?: Record<string, string>) => {
     const q = kioskCenterId ? `?kioskCenterId=${encodeURIComponent(kioskCenterId)}` : '';
     return safeFetch(`/kiosk/stats${q}`, {
@@ -183,6 +193,7 @@ export const api = {
       }
     });
   },
+
 
   // Verification review
   reviewApplication: async (id: string, payload: any) => {
