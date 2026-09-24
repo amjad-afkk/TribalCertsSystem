@@ -163,11 +163,24 @@ export const api = {
       body: JSON.stringify(payload)
     });
   },
-  batchSyncApplications: async (payload: { ashramSchoolCode?: string; batchId?: string; applications: any[] }) => {
-    return safeFetch('/applications/batch-sync', {
+  // MeeSeva / CSC Assisted Kiosk Student Onboarding (Internal Network & CORS Protected)
+  onboardKioskStudent: async (payload: any, networkHeaders?: Record<string, string>) => {
+    return safeFetch('/kiosk/onboard-student', {
       method: 'POST',
-      headers: getHeaders(),
+      headers: {
+        ...getHeaders(),
+        ...(networkHeaders || {})
+      },
       body: JSON.stringify(payload)
+    });
+  },
+  getKioskStats: async (kioskCenterId?: string, networkHeaders?: Record<string, string>) => {
+    const q = kioskCenterId ? `?kioskCenterId=${encodeURIComponent(kioskCenterId)}` : '';
+    return safeFetch(`/kiosk/stats${q}`, {
+      headers: {
+        ...getHeaders(),
+        ...(networkHeaders || {})
+      }
     });
   },
 

@@ -43,7 +43,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [timerSeconds, setTimerSeconds] = useState(60);
 
   // Officer SSO states
-  const [officerDesignation, setOfficerDesignation] = useState<'INO' | 'STATE_NODAL' | 'COMMITTEE' | 'MOTA_ADMIN'>('INO');
+  const [officerDesignation, setOfficerDesignation] = useState<'INO' | 'STATE_NODAL' | 'COMMITTEE' | 'MOTA_ADMIN' | 'KIOSK_OPERATOR'>('INO');
   const [officerId, setOfficerId] = useState('INO-JH-2026-88');
   const [officerPin, setOfficerPin] = useState('1234');
   const [officerLoading, setOfficerLoading] = useState(false);
@@ -145,12 +145,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     handleSendOtp(personaId);
   };
 
-  const handleQuickSelectOfficer = (desig: 'INO' | 'STATE_NODAL' | 'COMMITTEE' | 'MOTA_ADMIN') => {
+  const handleQuickSelectOfficer = (desig: 'INO' | 'STATE_NODAL' | 'COMMITTEE' | 'MOTA_ADMIN' | 'KIOSK_OPERATOR') => {
     setOfficerDesignation(desig);
     if (desig === 'INO') setOfficerId('INO-MP-2026-102');
     if (desig === 'STATE_NODAL') setOfficerId('SNO-JH-GOV-441');
     if (desig === 'COMMITTEE') setOfficerId('COMM-CHAIR-MOTA-01');
     if (desig === 'MOTA_ADMIN') setOfficerId('MOTA-SUPER-ADMIN-SEC');
+    if (desig === 'KIOSK_OPERATOR') setOfficerId('VLE-MEESEVA-4912');
     setOfficerPin('1234');
   };
 
@@ -461,6 +462,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <option value="STATE_NODAL">Tier 2: State Nodal Officer (SNO - Directorate)</option>
                 <option value="COMMITTEE">Selection Committee Chair (NOS & NFST Award)</option>
                 <option value="MOTA_ADMIN">MoTA Super Administrator (Ministry Level)</option>
+                <option value="KIOSK_OPERATOR">MeeSeva / CSC Kiosk Authorized Operator (VLE)</option>
               </select>
             </div>
 
@@ -550,6 +552,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   style={{ fontSize: '0.75rem' }}
                 >
                   👑 MoTA Super Admin
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickSelectOfficer('KIOSK_OPERATOR')}
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: '0.75rem', gridColumn: 'span 2', color: '#166534', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}
+                >
+                  🏪 MeeSeva / CSC Authorized VLE Operator
                 </button>
               </div>
             </div>

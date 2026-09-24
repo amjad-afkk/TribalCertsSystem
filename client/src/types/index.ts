@@ -88,7 +88,8 @@ export type UserRole =
   | 'INO'
   | 'STATE_NODAL'
   | 'COMMITTEE'
-  | 'MOTA_ADMIN';
+  | 'MOTA_ADMIN'
+  | 'KIOSK_OPERATOR';
 
 export interface PersonaConfig {
   id: string;

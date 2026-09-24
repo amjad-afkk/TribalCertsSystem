@@ -15,6 +15,8 @@ import { AuthModal, type AuthenticatedUser } from './components/auth/AuthModal';
 import { LandingLoginPage } from './components/auth/LandingLoginPage';
 import { NotificationModal } from './components/common/NotificationModal';
 import { FellowshipPortal } from './components/fellowship/FellowshipPortal';
+import { MeeSevaKioskModal } from './components/kiosk/MeeSevaKioskModal';
+import { Building2 } from 'lucide-react';
 import { api, setApiRole } from './services/api';
 import type { Applicant } from './types';
 
@@ -78,6 +80,7 @@ export const App: React.FC = () => {
   const [defaultApplySchemeCode, setDefaultApplySchemeCode] = useState<string | undefined>(undefined);
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [hasActiveFellowship, setHasActiveFellowship] = useState<boolean>(false);
+  const [isKioskModalOpen, setIsKioskModalOpen] = useState<boolean>(false);
 
   // Synchronize active role with API client for RBAC headers
   useEffect(() => {
@@ -165,7 +168,8 @@ export const App: React.FC = () => {
       'INO': 'ino-officer',
       'STATE_NODAL': 'state-nodal',
       'COMMITTEE': 'committee-member',
-      'MOTA_ADMIN': 'mota-admin'
+      'MOTA_ADMIN': 'mota-admin',
+      'KIOSK_OPERATOR': 'kiosk-operator'
     };
     const mapped = roleMap[user.role] || 'applicant-pooja';
     setCurrentRole(mapped);
@@ -178,6 +182,8 @@ export const App: React.FC = () => {
       setCurrentTab('committee');
     } else if (user.role === 'MOTA_ADMIN') {
       setCurrentTab('analytics');
+    } else if (user.role === 'KIOSK_OPERATOR') {
+      setCurrentTab('kiosk');
     } else {
       setCurrentTab('applicant');
     }
@@ -253,6 +259,15 @@ export const App: React.FC = () => {
         role: 'MOTA_ADMIN',
         isKycVerified: true,
         designationTitle: 'MoTA Super Administrator'
+      },
+      'kiosk-operator': {
+        id: 'VLE-MEESEVA-4912',
+        name: 'Shri Rajeshwar Rao',
+        email: 'vle.bhadradri@meeseva.telangana.gov.in',
+        phone: '+91 94401 23456',
+        role: 'KIOSK_OPERATOR',
+        isKycVerified: true,
+        designationTitle: 'MeeSeva / CSC Authorized VLE Operator'
       }
     };
 
@@ -266,6 +281,8 @@ export const App: React.FC = () => {
         setCurrentTab('committee');
       } else if (u.role === 'MOTA_ADMIN') {
         setCurrentTab('analytics');
+      } else if (u.role === 'KIOSK_OPERATOR') {
+        setCurrentTab('kiosk');
       } else {
         setCurrentTab('applicant');
       }
@@ -322,6 +339,7 @@ export const App: React.FC = () => {
         onOpenNotifications={() => setIsNotificationModalOpen(true)}
         unreadNotifsCount={unreadNotifsCount}
         hasActiveFellowship={hasActiveFellowship}
+        onOpenKioskModal={() => setIsKioskModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -437,6 +455,50 @@ export const App: React.FC = () => {
                 <SchemeConfigurator />
               </RoleGuard>
             )}
+
+            {/* MeeSeva / CSC Assisted Kiosk Gateway */}
+            {currentUser && currentTab === 'kiosk' && (
+              <RoleGuard
+                allowedRoles={['KIOSK_OPERATOR', 'MOTA_ADMIN']}
+                currentRole={currentRole}
+                currentUser={currentUser}
+                onOpenLogin={() => handleOpenLogin('officer')}
+                onSwitchPersona={handleSwitchPersona}
+                featureName="MeeSeva / CSC Assisted Kiosk Gateway"
+                requiredClearanceLabel="MeeSeva Authorized VLE Operator / MoTA Admin"
+                suggestedPersonaId="kiosk-operator"
+                suggestedPersonaName="Shri Rajeshwar Rao (VLE)"
+              >
+                <div style={{ maxWidth: '800px', margin: '1rem auto' }}>
+                  <div style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '8px',
+                    border: '1px solid #E2E8F0',
+                    padding: '2.5rem 2rem',
+                    textAlign: 'center',
+                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
+                  }}>
+                    <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#F0FDF4', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto' }}>
+                      <Building2 size={28} />
+                    </div>
+                    <h2 style={{ fontSize: '1.4rem', color: '#0A2540', marginBottom: '0.5rem', fontWeight: 700 }}>
+                      MeeSeva / CSC Assisted Citizen Onboarding Gateway
+                    </h2>
+                    <p style={{ color: '#64748B', fontSize: '0.875rem', maxWidth: '560px', margin: '0 auto 1.75rem auto', lineHeight: 1.5 }}>
+                      You are authenticated as an empanelled Village Level Entrepreneur (VLE). Launch the assisted registration terminal to onboard remote ST candidates with internal CORS network isolation, live origin switching, and official digital receipt seals.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIsKioskModalOpen(true)}
+                      className="btn btn-primary"
+                      style={{ padding: '0.75rem 1.75rem', fontSize: '0.9375rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                    >
+                      <Building2 size={18} /> Launch Assisted Registration Terminal
+                    </button>
+                  </div>
+                </div>
+              </RoleGuard>
+            )}
           </div>
         </main>
       </ErrorBoundary>
@@ -478,6 +540,12 @@ export const App: React.FC = () => {
         isOpen={isNotificationModalOpen}
         onClose={() => setIsNotificationModalOpen(false)}
         recipientId={currentUser?.id || 'app-user-01'}
+      />
+
+      {/* MeeSeva / CSC Assisted Kiosk Terminal Modal */}
+      <MeeSevaKioskModal
+        isOpen={isKioskModalOpen}
+        onClose={() => setIsKioskModalOpen(false)}
       />
 
       {/* National Portal Footer */}

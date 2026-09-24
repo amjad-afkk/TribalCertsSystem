@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   ShieldCheck,
   UserCheck,
@@ -11,14 +11,9 @@ import {
   Bell,
   Award,
   LogOut,
-  Wifi,
-  WifiOff,
-  UploadCloud,
-  Trash2,
-  X
+  Building2
 } from 'lucide-react';
-import { offlineQueueService, type OfflineApplication } from '../../services/offlineQueue';
-import { api } from '../../services/api';
+import { MeeSevaKioskModal } from '../kiosk/MeeSevaKioskModal';
 
 interface GovHeaderProps {
   currentTab: string;
@@ -29,6 +24,7 @@ interface GovHeaderProps {
   onOpenNotifications: () => void;
   unreadNotifsCount?: number;
   hasActiveFellowship?: boolean;
+  onOpenKioskModal?: () => void;
 }
 
 export const GovHeader: React.FC<GovHeaderProps> = ({
@@ -39,49 +35,13 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
   onLogout,
   onOpenNotifications,
   unreadNotifsCount = 0,
-  hasActiveFellowship = false
+  hasActiveFellowship = false,
+  onOpenKioskModal
 }) => {
   const role = currentUser?.role || 'APPLICANT';
 
-  // Offline queue state for Ashram schools
-  const [isOfflineModalOpen, setIsOfflineModalOpen] = useState(false);
-  const [offlineQueue, setOfflineQueue] = useState<OfflineApplication[]>([]);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncSuccessMsg, setSyncSuccessMsg] = useState<string | null>(null);
-
-  const refreshQueue = () => {
-    setOfflineQueue(offlineQueueService.getQueue());
-  };
-
-  useEffect(() => {
-    refreshQueue();
-  }, []);
-
-  const handleSeedApp = () => {
-    offlineQueueService.seedSampleApp();
-    refreshQueue();
-  };
-
-  const handleSyncBatch = async () => {
-    if (offlineQueue.length === 0) return;
-    setIsSyncing(true);
-    setSyncSuccessMsg(null);
-    try {
-      const resp = await api.batchSyncApplications({
-        ashramSchoolCode: offlineQueue[0]?.ashramSchoolCode || 'EMRS-ASHRAM-PWA',
-        applications: offlineQueue
-      });
-      if (resp.success) {
-        offlineQueueService.clear();
-        refreshQueue();
-        setSyncSuccessMsg(`Batch ${resp.batchId} cryptographically ingested: ${resp.syncedCount} applications synced to MoTA Central.`);
-      }
-    } catch (err: any) {
-      console.error('Batch sync error:', err);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
+  // MeeSeva / CSC Assisted Kiosk modal state
+  const [isKioskModalOpen, setIsKioskModalOpen] = useState(false);
 
   // Compute tabs strictly filtered by the active user's authorized role
   const getNavTabs = () => {
@@ -119,6 +79,12 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
           { id: 'waterfall', label: 'Spillover Waterfall Visualizer', icon: GitFork }
         ];
 
+      case 'KIOSK_OPERATOR':
+        return [
+          { id: 'kiosk', label: 'MeeSeva Kiosk Gateway', icon: Building2 },
+          { id: 'simulator', label: 'Eligibility Simulator', icon: Sparkles }
+        ];
+
       case 'APPLICANT':
       default: {
         const tabs = [
@@ -143,6 +109,7 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
       case 'STATE_NODAL': return 'State Nodal Officer (Tier 2)';
       case 'COMMITTEE': return 'Selection Committee Chair';
       case 'MOTA_ADMIN': return 'Ministry Super Administrator';
+      case 'KIOSK_OPERATOR': return 'MeeSeva / CSC Authorized VLE Operator';
       case 'APPLICANT':
       default:
         return currentUser.designationTitle || 'Citizen / ST Scholar';
@@ -196,13 +163,10 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
 
         {/* Right Section: Authentication & Profile */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {/* Ashram School Mesh Sync Badge */}
+          {/* MeeSeva / CSC Kiosk Gateway Badge */}
           <button
             type="button"
-            onClick={() => {
-              refreshQueue();
-              setIsOfflineModalOpen(true);
-            }}
+            onClick={() => onOpenKioskModal ? onOpenKioskModal() : setIsKioskModalOpen(true)}
             className="btn btn-secondary btn-sm"
             style={{
               display: 'inline-flex',
@@ -211,14 +175,14 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
               fontSize: '0.75rem',
               padding: '0.35rem 0.65rem',
               borderRadius: '20px',
-              backgroundColor: offlineQueue.length > 0 ? '#FEF3C7' : '#F0FDF4',
-              color: offlineQueue.length > 0 ? '#92400E' : '#166534',
-              border: `1px solid ${offlineQueue.length > 0 ? '#FCD34D' : '#BBF7D0'}`
+              backgroundColor: '#F0FDF4',
+              color: '#166534',
+              border: '1px solid #BBF7D0'
             }}
-            title="Ashram School Offline Queue & Mesh Sync"
+            title="MeeSeva / CSC Kiosk Assisted Student Onboarding (Internal CORS Protected)"
           >
-            {offlineQueue.length > 0 ? <WifiOff size={13} style={{ color: '#D97706' }} /> : <Wifi size={13} style={{ color: '#16A34A' }} />}
-            <span>{offlineQueue.length > 0 ? `${offlineQueue.length} Offline Queued` : 'Ashram Sync Online'}</span>
+            <Building2 size={13} style={{ color: '#16A34A' }} />
+            <span>MeeSeva Kiosk Portal</span>
           </button>
 
           {!currentUser ? (
@@ -384,163 +348,12 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
         </div>
       </nav>
 
-      {/* MODAL: Ashram School Offline Mesh Sync */}
-      {isOfflineModalOpen && (
-        <div className="modal-backdrop" style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(10, 37, 64, 0.75)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, padding: '1rem'
-        }}>
-          <div className="gov-card" style={{ maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.2rem' }}>
-                  <WifiOff size={18} style={{ color: '#E06D14' }} />
-                  <h3 style={{ fontSize: '1.125rem', color: '#0A2540', margin: 0 }}>
-                    Ashram School Offline-First Mesh Batch Sync (EMRS)
-                  </h3>
-                </div>
-                <p style={{ fontSize: '0.75rem', color: '#64748B', margin: 0 }}>
-                  Enables teachers and nodal volunteers in remote Schedule V areas to record applications offline. Automatically buffers to client storage with cryptographic SHA-256 seal.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsOfflineModalOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {syncSuccessMsg && (
-              <div style={{
-                backgroundColor: '#DCFCE7',
-                border: '1px solid #86EFAC',
-                color: '#166534',
-                padding: '0.75rem',
-                borderRadius: '6px',
-                fontSize: '0.75rem',
-                marginBottom: '1rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem'
-              }}>
-                <CheckCircle2 size={16} style={{ color: '#16A34A', flexShrink: 0 }} />
-                <span>{syncSuccessMsg}</span>
-              </div>
-            )}
-
-            {/* Offline Queue Summary */}
-            <div style={{
-              backgroundColor: '#F8FAFC',
-              borderRadius: '6px',
-              border: '1px solid #E2E8F0',
-              padding: '0.85rem',
-              marginBottom: '1rem',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Locally Buffered Applications</div>
-                <strong style={{ fontSize: '1.25rem', color: '#0A2540' }}>{offlineQueue.length} Applications Queued</strong>
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  type="button"
-                  onClick={handleSeedApp}
-                  className="btn btn-secondary btn-sm"
-                  style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-                >
-                  <Sparkles size={12} style={{ color: '#E06D14' }} /> + Simulate Offline App
-                </button>
-                {offlineQueue.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      offlineQueueService.clear();
-                      refreshQueue();
-                    }}
-                    className="btn btn-secondary btn-sm"
-                    style={{ fontSize: '0.75rem', color: '#B91C1C' }}
-                    title="Clear offline storage"
-                  >
-                    <Trash2 size={12} /> Clear
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Application List */}
-            <div style={{ maxHeight: '280px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem' }}>
-              {offlineQueue.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem', color: '#94A3B8', fontSize: '0.8125rem' }}>
-                  No offline applications buffered. Click "+ Simulate Offline App" to generate a sample offline tribal intake record.
-                </div>
-              ) : (
-                offlineQueue.map((item, idx) => (
-                  <div
-                    key={item.localId}
-                    style={{
-                      padding: '0.75rem',
-                      borderRadius: '6px',
-                      border: '1px solid #E2E8F0',
-                      backgroundColor: '#FFFFFF',
-                      fontSize: '0.75rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.35rem'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ fontSize: '0.8125rem', color: '#0A2540' }}>
-                        #{idx + 1} {item.studentName} ({item.standard})
-                      </strong>
-                      <span style={{ fontSize: '0.6875rem', color: '#D97706', backgroundColor: '#FEF3C7', padding: '0.15rem 0.45rem', borderRadius: '4px', fontWeight: 600 }}>
-                        BUFFERED LOCAL
-                      </span>
-                    </div>
-
-                    <div style={{ color: '#475569', display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                      <span>School: <strong>{item.ashramSchoolCode}</strong></span>
-                      <span>Marks: <strong>{item.academicPercentage}%</strong></span>
-                      <span>Income: <strong>₹{item.claimedIncome.toLocaleString('en-IN')}</strong></span>
-                    </div>
-
-                    <div style={{ fontFamily: 'monospace', fontSize: '0.625rem', color: '#64748B' }}>
-                      Seal: {item.localSha256Hash} • Queued: {new Date(item.queuedAt).toLocaleTimeString()}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Action Bar */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', borderTop: '1px solid #E2E8F0', paddingTop: '0.75rem' }}>
-              <button
-                type="button"
-                onClick={() => setIsOfflineModalOpen(false)}
-                className="btn btn-secondary"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={handleSyncBatch}
-                disabled={isSyncing || offlineQueue.length === 0}
-                className="btn btn-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-              >
-                <UploadCloud size={15} />
-                {isSyncing ? 'Ingesting Batch...' : `Batch Sync to MoTA Central (${offlineQueue.length})`}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* MeeSeva / CSC Assisted Kiosk Gateway Modal */}
+      {!onOpenKioskModal && (
+        <MeeSevaKioskModal
+          isOpen={isKioskModalOpen}
+          onClose={() => setIsKioskModalOpen(false)}
+        />
       )}
     </header>
   );

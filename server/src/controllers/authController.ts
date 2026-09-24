@@ -153,6 +153,11 @@ export const officerLogin = (req: Request, res: Response): void => {
         role: 'MOTA_ADMIN',
         name: 'Joint Secretary (Scholarships)',
         title: 'Ministry of Tribal Affairs Super Administrator'
+      },
+      'KIOSK_OPERATOR': {
+        role: 'KIOSK_OPERATOR',
+        name: 'Shri Rajeshwar Rao',
+        title: 'MeeSeva / CSC Authorized VLE Operator'
       }
     };
 

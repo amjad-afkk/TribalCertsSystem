@@ -5,9 +5,10 @@ import {
   getApplications,
   getApplicationById,
   submitApplication,
-  resubmitDeficiency,
-  batchSyncApplications
+  resubmitDeficiency
 } from '../controllers/applicationController.js';
+import { onboardKioskStudent, getKioskStats } from '../controllers/kioskController.js';
+import { verifyKioskCorsAndLicense } from '../middleware/kioskSecurity.js';
 import { reviewApplication, reviewDocument } from '../controllers/verificationController.js';
 import { extractAndVerifyDocument } from '../controllers/documentController.js';
 import { chatWithGemini } from '../controllers/chatbotController.js';
@@ -91,7 +92,10 @@ router.get('/applications', getApplications);
 router.get('/applications/:id', getApplicationById);
 router.post('/applications', validateBody(schemas.submitApplication), submitApplication);
 router.post('/applications/:id/resubmit', resubmitDeficiency);
-router.post('/applications/batch-sync', batchSyncApplications);
+
+// MeeSeva / CSC Assisted Kiosk Student Onboarding (Internal CORS & Government Intranet Protected)
+router.post('/kiosk/onboard-student', verifyKioskCorsAndLicense, validateBody(schemas.kioskOnboardStudent), onboardKioskStudent);
+router.get('/kiosk/stats', verifyKioskCorsAndLicense, getKioskStats);
 
 // Verification & Scrutiny (Restricted to Nodal & Ministry Officers)
 router.post('/applications/:id/review', requireRoles(['INO', 'STATE_NODAL', 'MOTA_ADMIN']), validateBody(schemas.reviewApplication), reviewApplication);

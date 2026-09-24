@@ -10,6 +10,7 @@ const ROLE_MAP: Record<string, UserRole> = {
   'STATE_NODAL': 'STATE_NODAL',
   'COMMITTEE': 'COMMITTEE',
   'MOTA_ADMIN': 'MOTA_ADMIN',
+  'KIOSK_OPERATOR': 'KIOSK_OPERATOR',
 
   // Demo persona identifiers
   'applicant-pooja': 'APPLICANT',
@@ -18,7 +19,8 @@ const ROLE_MAP: Record<string, UserRole> = {
   'ino-officer': 'INO',
   'state-nodal': 'STATE_NODAL',
   'committee-member': 'COMMITTEE',
-  'mota-admin': 'MOTA_ADMIN'
+  'mota-admin': 'MOTA_ADMIN',
+  'kiosk-operator': 'KIOSK_OPERATOR'
 };
 
 export interface AuthenticatedRequest extends Request {
