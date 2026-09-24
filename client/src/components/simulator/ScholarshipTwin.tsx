@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
 import { api } from '../../services/api';
 import type { SchemeMatchResult } from '../../types';
-import { Sparkles, CheckCircle, XCircle, ArrowRight } from 'lucide-react';
+import {
+  Sparkles,
+  CheckCircle,
+  XCircle,
+  ArrowRight,
+  Compass,
+  GraduationCap,
+  Briefcase,
+  ShieldCheck,
+  FileText
+} from 'lucide-react';
 
 interface ScholarshipTwinProps {
   onSelectSchemeToApply?: (schemeCode: string) => void;
@@ -10,14 +20,16 @@ interface ScholarshipTwinProps {
 export const ScholarshipTwin: React.FC<ScholarshipTwinProps> = ({ onSelectSchemeToApply }) => {
   const [category, setCategory] = useState('PVTG');
   const [annualIncome, setAnnualIncome] = useState('180000');
-  const [courseLevel, setCourseLevel] = useState('M.Phil/Ph.D');
+  const [courseLevel, setCourseLevel] = useState('UG');
   const [academicPercentage, setAcademicPercentage] = useState('74');
-  const [age, setAge] = useState('26');
+  const [age, setAge] = useState('21');
   const [isPwD, setIsPwD] = useState(false);
   const [qsRank, setQsRank] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SchemeMatchResult[] | null>(null);
+  const [roadmap, setRoadmap] = useState<any | null>(null);
+  const [activeViewTab, setActiveViewTab] = useState<'schemes' | 'roadmap'>('schemes');
 
   const handleSimulate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,8 +45,11 @@ export const ScholarshipTwin: React.FC<ScholarshipTwinProps> = ({ onSelectScheme
         isPVTG: category === 'PVTG',
         qsRank: qsRank ? Number(qsRank) : undefined
       });
-      if (resp.success) {
+      if (resp && resp.success) {
         setResults(resp.matches);
+        if (resp.roadmap) {
+          setRoadmap(resp.roadmap);
+        }
       }
     } catch (err) {
       console.error('Simulator error:', err);
@@ -193,77 +208,281 @@ export const ScholarshipTwin: React.FC<ScholarshipTwinProps> = ({ onSelectScheme
 
           {results && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ fontSize: '1rem', color: '#0A2540' }}>
-                  Evaluated MoTA Schemes ({results.length})
-                </h3>
+              {/* Tab Selector */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveViewTab('schemes')}
+                    style={{
+                      padding: '0.4rem 0.85rem',
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      borderRadius: '4px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      backgroundColor: activeViewTab === 'schemes' ? '#1A4D8F' : '#F1F5F9',
+                      color: activeViewTab === 'schemes' ? '#FFFFFF' : '#4A5568'
+                    }}
+                  >
+                    <Sparkles size={14} /> Schemes ({results.length})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveViewTab('roadmap')}
+                    style={{
+                      padding: '0.4rem 0.85rem',
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      borderRadius: '4px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      backgroundColor: activeViewTab === 'roadmap' ? '#1A4D8F' : '#F1F5F9',
+                      color: activeViewTab === 'roadmap' ? '#FFFFFF' : '#4A5568'
+                    }}
+                  >
+                    <Compass size={14} /> 🎯 Career & Reservation Roadmap
+                  </button>
+                </div>
+
                 <span style={{ fontSize: '0.75rem', color: '#176529', fontWeight: 600 }}>
                   {results.filter(r => r.isEligible).length} Eligible Schemes Found
                 </span>
               </div>
 
-              {results.map((r) => (
-                <div
-                  key={r.schemeId}
-                  className="gov-card"
-                  style={{
-                    padding: '1.125rem',
-                    borderLeft: `4px solid ${r.isEligible ? '#1B7837' : '#C82333'}`,
-                    backgroundColor: r.isEligible ? '#FFFFFF' : '#FAFAFA'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                    <div>
-                      <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#4A5568' }}>
-                        CODE: {r.schemeCode}
+              {/* View 1: Scheme Matches */}
+              {activeViewTab === 'schemes' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                  {results.map((r) => (
+                    <div
+                      key={r.schemeId}
+                      className="gov-card"
+                      style={{
+                        padding: '1.125rem',
+                        borderLeft: `4px solid ${r.isEligible ? '#1B7837' : '#C82333'}`,
+                        backgroundColor: r.isEligible ? '#FFFFFF' : '#FAFAFA'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                        <div>
+                          <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#4A5568' }}>
+                            CODE: {r.schemeCode}
+                          </div>
+                          <h4 style={{ fontSize: '0.9375rem', color: '#0A2540', fontWeight: 600 }}>
+                            {r.schemeName}
+                          </h4>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <div style={{
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            backgroundColor: r.isEligible ? '#EAF7EE' : '#FDF0ED',
+                            color: r.isEligible ? '#176529' : '#A61C1C'
+                          }}>
+                            {r.matchScore}% Match
+                          </div>
+                        </div>
                       </div>
-                      <h4 style={{ fontSize: '0.9375rem', color: '#0A2540', fontWeight: 600 }}>
-                        {r.schemeName}
-                      </h4>
+
+                      {/* Reasons / Blockers */}
+                      <div style={{ fontSize: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.5rem' }}>
+                        {r.reasons.slice(0, 2).map((reason, idx) => (
+                          <div key={idx} style={{ color: '#176529', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <CheckCircle size={12} /> {reason}
+                          </div>
+                        ))}
+
+                        {r.blockers.map((blocker, idx) => (
+                          <div key={idx} style={{ color: '#A61C1C', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <XCircle size={12} /> {blocker}
+                          </div>
+                        ))}
+                      </div>
+
+                      {r.isEligible && onSelectSchemeToApply && (
+                        <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'flex-end' }}>
+                          <button
+                            onClick={() => onSelectSchemeToApply(r.schemeCode)}
+                            className="btn btn-primary btn-sm"
+                            style={{ fontSize: '0.75rem', padding: '0.3rem 0.75rem' }}
+                          >
+                            Apply for this Scheme <ArrowRight size={12} />
+                          </button>
+                        </div>
+                      )}
                     </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <div style={{
-                        padding: '0.2rem 0.6rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        backgroundColor: r.isEligible ? '#EAF7EE' : '#FDF0ED',
-                        color: r.isEligible ? '#176529' : '#A61C1C'
-                      }}>
-                        {r.matchScore}% Match
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Reasons / Blockers */}
-                  <div style={{ fontSize: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.5rem' }}>
-                    {r.reasons.slice(0, 2).map((reason, idx) => (
-                      <div key={idx} style={{ color: '#176529', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <CheckCircle size={12} /> {reason}
-                      </div>
-                    ))}
-
-                    {r.blockers.map((blocker, idx) => (
-                      <div key={idx} style={{ color: '#A61C1C', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <XCircle size={12} /> {blocker}
-                      </div>
-                    ))}
-                  </div>
-
-                  {r.isEligible && onSelectSchemeToApply && (
-                    <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'flex-end' }}>
-                      <button
-                        onClick={() => onSelectSchemeToApply(r.schemeCode)}
-                        className="btn btn-primary btn-sm"
-                        style={{ fontSize: '0.75rem', padding: '0.3rem 0.75rem' }}
-                      >
-                        Apply for this Scheme <ArrowRight size={12} />
-                      </button>
-                    </div>
-                  )}
+                  ))}
                 </div>
-              ))}
+              )}
+
+              {/* View 2: Personalized Academic, Career & Reservation Roadmap */}
+              {activeViewTab === 'roadmap' && roadmap && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {/* Candidate Summary Banner */}
+                  <div style={{
+                    backgroundColor: '#EFF6FF',
+                    border: '1px solid #BFDBFE',
+                    borderRadius: '6px',
+                    padding: '0.875rem 1rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '0.6875rem', color: '#1E40AF', fontWeight: 600, textTransform: 'uppercase' }}>
+                        Personalized Career Co-Pilot
+                      </div>
+                      <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#1E3A8A' }}>
+                        {roadmap.candidateSummary.categoryLabel} • {roadmap.candidateSummary.levelLabel}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', backgroundColor: '#DBEAFE', color: '#1E40AF', padding: '0.2rem 0.6rem', borderRadius: '4px', fontWeight: 600 }}>
+                      {roadmap.candidateSummary.careerStage}
+                    </span>
+                  </div>
+
+                  {/* Section 1: Academic Pathway */}
+                  <div>
+                    <h4 style={{ fontSize: '0.9rem', color: '#0A2540', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <GraduationCap size={16} style={{ color: '#1A4D8F' }} />
+                      Higher Education & Fellowship Milestones
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {roadmap.academicPath.map((step: any, i: number) => (
+                        <div
+                          key={i}
+                          style={{
+                            border: '1px solid #E2E8F0',
+                            borderLeft: '4px solid #1A4D8F',
+                            borderRadius: '6px',
+                            padding: '0.875rem',
+                            backgroundColor: '#FFFFFF'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.35rem' }}>
+                            <div>
+                              <span style={{ fontSize: '0.6875rem', color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>
+                                {step.stage}
+                              </span>
+                              <h5 style={{ fontSize: '0.875rem', color: '#0A2540', fontWeight: 700 }}>
+                                {step.title}
+                              </h5>
+                            </div>
+                            <span style={{ fontSize: '0.75rem', color: '#15803D', fontWeight: 700, backgroundColor: '#DCFCE7', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                              {step.estimatedFinancialSupport}
+                            </span>
+                          </div>
+
+                          <div style={{ fontSize: '0.75rem', color: '#1E40AF', fontWeight: 600, marginBottom: '0.5rem' }}>
+                            Scheme: {step.schemeAlignment}
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '0.5rem' }}>
+                            {step.keyBenefits.map((b: string, idx: number) => (
+                              <div key={idx} style={{ fontSize: '0.75rem', color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                <CheckCircle size={12} style={{ color: '#16A34A', flexShrink: 0 }} /> {b}
+                              </div>
+                            ))}
+                          </div>
+
+                          <div style={{ fontSize: '0.6875rem', color: '#475569', backgroundColor: '#F8FAFC', padding: '0.4rem 0.6rem', borderRadius: '4px', border: '1px dashed #CBD5E1' }}>
+                            <strong>Action Required:</strong> {step.actionRequired}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Section 2: Statutory Affirmative Action & Constitutional Rights */}
+                  <div>
+                    <h4 style={{ fontSize: '0.9rem', color: '#0A2540', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <ShieldCheck size={16} style={{ color: '#15803D' }} />
+                      Statutory Affirmative Action & Constitutional Rights
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.75rem' }}>
+                      {roadmap.statutoryEntitlements.map((ent: any, i: number) => (
+                        <div
+                          key={i}
+                          style={{
+                            border: '1px solid #E2E8F0',
+                            borderRadius: '6px',
+                            padding: '0.875rem',
+                            backgroundColor: '#F8FAFC'
+                          }}
+                        >
+                          <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0A2540', marginBottom: '0.2rem' }}>
+                            {ent.title}
+                          </div>
+                          <div style={{ fontSize: '0.6875rem', color: '#1E40AF', fontStyle: 'italic', marginBottom: '0.4rem' }}>
+                            {ent.ruleCitation}
+                          </div>
+                          <p style={{ fontSize: '0.75rem', color: '#334155', lineHeight: 1.4, margin: 0 }}>
+                            {ent.benefitDescription}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Section 3: Career Gateways */}
+                  <div>
+                    <h4 style={{ fontSize: '0.9rem', color: '#0A2540', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Briefcase size={16} style={{ color: '#7C3AED' }} />
+                      Public Sector & Competitive Exam Gateways
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.75rem' }}>
+                      {roadmap.careerGateways.map((gw: any, i: number) => (
+                        <div
+                          key={i}
+                          style={{
+                            border: '1px solid #E2E8F0',
+                            borderRadius: '6px',
+                            padding: '0.875rem',
+                            backgroundColor: '#FFFFFF'
+                          }}
+                        >
+                          <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#1E1B4B', marginBottom: '0.25rem' }}>
+                            {gw.sector}
+                          </div>
+                          <div style={{ fontSize: '0.6875rem', color: '#6B21A8', fontWeight: 600, marginBottom: '0.4rem' }}>
+                            Key Exams: {gw.exams.join(' • ')}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#334155', marginBottom: '0.4rem', lineHeight: 1.4 }}>
+                            <strong>ST Privilege:</strong> {gw.stPrivilege}
+                          </div>
+                          <div style={{ fontSize: '0.6875rem', color: '#15803D', backgroundColor: '#F0FDF4', padding: '0.35rem 0.5rem', borderRadius: '4px' }}>
+                            💡 {gw.preparationTip}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Section 4: Documentation Checklist */}
+                  <div style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '6px', padding: '0.875rem 1rem' }}>
+                    <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#92400E', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <FileText size={15} /> Mandatory Documentation Checklist for Tribal Beneficiaries
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.75rem', color: '#78350F', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      {roadmap.documentationChecklist.map((doc: string, idx: number) => (
+                        <li key={idx}>{doc}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

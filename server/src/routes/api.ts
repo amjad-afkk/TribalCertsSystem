@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getAllSchemes, getSchemeById, createScheme } from '../controllers/schemeController.js';
-import { runSimulator } from '../controllers/simulatorController.js';
+import { runSimulator, getCareerRoadmap } from '../controllers/simulatorController.js';
 import {
   getApplications,
   getApplicationById,
@@ -63,6 +63,7 @@ router.post('/schemes', requireRoles(['MOTA_ADMIN']), validateBody(schemas.creat
 
 // Scholarship Twin Simulator (Open citizen self-service)
 router.post('/simulator/match', validateBody(schemas.simulatorMatch), runSimulator);
+router.post('/simulator/roadmap', getCareerRoadmap);
 
 // Applications
 router.get('/applications', getApplications);

@@ -105,6 +105,13 @@ export const api = {
       body: JSON.stringify(criteria)
     });
   },
+  getCareerRoadmap: async (criteria: any) => {
+    return safeFetch('/simulator/roadmap', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(criteria)
+    });
+  },
 
   // Applications
   getApplications: async (params?: Record<string, string>) => {
