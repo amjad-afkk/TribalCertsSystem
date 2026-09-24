@@ -21,7 +21,10 @@ import {
   getFellowshipRecord,
   submitJoiningReport,
   submitContinuationReport,
-  submitThesis
+  submitThesis,
+  guideSignOff,
+  upgradeJrfToSrf,
+  verifyShodhgangaArchival
 } from '../controllers/fellowshipController.js';
 import {
   searchInstitutes,
@@ -50,6 +53,9 @@ router.get('/fellowship/:applicantId', getFellowshipRecord);
 router.post('/fellowship/joining', validateBody(schemas.submitJoining), submitJoiningReport);
 router.post('/fellowship/continuation', validateBody(schemas.submitContinuation), submitContinuationReport);
 router.post('/fellowship/thesis', validateBody(schemas.submitThesis), submitThesis);
+router.post('/fellowship/guide-signoff', guideSignOff);
+router.post('/fellowship/upgrade-srf', upgradeJrfToSrf);
+router.post('/fellowship/shodhganga-verify', verifyShodhgangaArchival);
 
 // DigiLocker Integration & QR Verification (FR-1.2, Section 5.4)
 router.get('/digilocker/documents', getDigiLockerDocuments);

@@ -283,6 +283,27 @@ export const api = {
       body: JSON.stringify(payload)
     });
   },
+  guideSignOff: async (payload: { fellowshipId: string; guideToken?: string; guideComments?: string; rating?: string }) => {
+    return safeFetch('/fellowship/guide-signoff', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+  },
+  upgradeJrfToSrf: async (payload: { fellowshipId: string; assessmentCommitteeNotes?: string; publishedPapersCount?: number }) => {
+    return safeFetch('/fellowship/upgrade-srf', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+  },
+  verifyShodhgangaArchival: async (payload: { thesisTitle?: string; candidateName?: string; university?: string }) => {
+    return safeFetch('/fellowship/shodhganga-verify', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+  },
 
   // DigiLocker Integration & QR Verification (FR-1.2, Section 5.4)
   getDigiLockerDocuments: async (applicantId?: string) => {
