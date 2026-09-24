@@ -3,7 +3,7 @@ services:
     name: mota-scholarship-system
     runtime: node
     plan: free
-    branch: deploy
+    branch: main
     buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /health
