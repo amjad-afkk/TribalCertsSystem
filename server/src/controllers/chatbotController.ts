@@ -61,7 +61,7 @@ export async function chatWithGemini(req: Request, res: Response): Promise<void>
   if (apiKey && apiKey.trim().length > 0) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite' });
 
       const languageInstructions: Record<string, string> = {
         EN: 'Respond in clear, encouraging, authoritative English.',

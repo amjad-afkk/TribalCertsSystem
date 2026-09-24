@@ -385,3 +385,4 @@ export const resubmitDeficiency = (req: Request, res: Response) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+

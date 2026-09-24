@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import {
-  Award, Clock, CheckCircle2, RefreshCw, BookOpen, Calendar
+  Award, Clock, CheckCircle2, RefreshCw, BookOpen,
+  ShieldCheck, TrendingUp, Sparkles, Send
 } from 'lucide-react';
 
 interface FellowshipPortalProps {
@@ -26,6 +27,24 @@ export const FellowshipPortal: React.FC<FellowshipPortalProps> = ({ applicantId 
   const [isThesisModalOpen, setIsThesisModalOpen] = useState(false);
   const [thesisTitle, setThesisTitle] = useState('');
   const [isSubmittingThesis, setIsSubmittingThesis] = useState(false);
+
+  // Guide 1-Click Sign-Off state
+  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
+  const [guideToken, setGuideToken] = useState('GUIDE-TOKEN-JNU-2026');
+  const [guideRating, setGuideRating] = useState('OUTSTANDING');
+  const [guideComments, setGuideComments] = useState('Satisfactory empirical research and field survey data collected in tribal district.');
+  const [guideSignoffSuccess, setGuideSignoffSuccess] = useState<string | null>(null);
+  const [isSubmittingGuideSignoff, setIsSubmittingGuideSignoff] = useState(false);
+
+  // JRF -> SRF Upgradation state
+  const [fellowshipGrade, setFellowshipGrade] = useState<'JRF' | 'SRF'>('JRF');
+  const [monthlyStipendRate, setMonthlyStipendRate] = useState<number>(37000);
+  const [isUpgradingSrf, setIsUpgradingSrf] = useState(false);
+  const [srfUpgradeNotes, setSrfUpgradeNotes] = useState<string | null>(null);
+
+  // Shodhganga verification state
+  const [shodhgangaResult, setShodhgangaResult] = useState<any | null>(null);
+  const [isVerifyingShodhganga, setIsVerifyingShodhganga] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -111,6 +130,68 @@ export const FellowshipPortal: React.FC<FellowshipPortalProps> = ({ applicantId 
     }
   };
 
+  const handleGuideSignoff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fellowship) return;
+    setIsSubmittingGuideSignoff(true);
+    try {
+      const resp = await api.guideSignOff({
+        fellowshipId: fellowship.id,
+        guideToken,
+        guideComments,
+        rating: guideRating
+      });
+      if (resp.success) {
+        setGuideSignoffSuccess(`Digital Sign-off Confirmed. PFMS Release Ref: ${resp.transactionRef}`);
+        await loadData();
+      }
+    } catch (err) {
+      console.error('Guide signoff error:', err);
+    } finally {
+      setIsSubmittingGuideSignoff(false);
+    }
+  };
+
+  const handleUpgradeSrf = async () => {
+    if (!fellowship) return;
+    setIsUpgradingSrf(true);
+    try {
+      const resp = await api.upgradeJrfToSrf({
+        fellowshipId: fellowship.id,
+        assessmentCommitteeNotes: 'Candidate completed 2-year doctoral coursework, passed comprehensive defense, and published 2 peer-reviewed SCOPUS index papers.',
+        publishedPapersCount: 2
+      });
+      if (resp.success) {
+        setFellowshipGrade('SRF');
+        setMonthlyStipendRate(resp.monthlyStipend || 42000);
+        setSrfUpgradeNotes(resp.message);
+        await loadData();
+      }
+    } catch (err) {
+      console.error('SRF upgrade error:', err);
+    } finally {
+      setIsUpgradingSrf(false);
+    }
+  };
+
+  const handleVerifyShodhganga = async () => {
+    setIsVerifyingShodhganga(true);
+    try {
+      const resp = await api.verifyShodhgangaArchival({
+        thesisTitle: thesisTitle || fellowship?.thesis_title || 'Tribal Ethnography and Socio-Economic Development',
+        candidateName: 'Pooja Maravi',
+        university: fellowship?.institute_name || 'Jawaharlal Nehru University'
+      });
+      if (resp.success) {
+        setShodhgangaResult(resp);
+      }
+    } catch (err) {
+      console.error('Shodhganga verification error:', err);
+    } finally {
+      setIsVerifyingShodhganga(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="gov-card" style={{ textAlign: 'center', padding: '3rem', color: '#718096' }}>
@@ -186,15 +267,15 @@ export const FellowshipPortal: React.FC<FellowshipPortalProps> = ({ applicantId 
         <div className="gov-card" style={{ borderLeft: '3px solid #1B7837' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <span style={{ fontSize: '0.75rem', color: '#718096', fontWeight: 600 }}>Current Research Quarter</span>
+              <span style={{ fontSize: '0.75rem', color: '#718096', fontWeight: 600 }}>Fellowship Rank & Rate</span>
               <h3 style={{ fontSize: '1.25rem', color: '#1B7837', marginTop: '0.25rem' }}>
-                Quarter {fellowship.current_quarter} (Year {Math.ceil((Number(fellowship.current_quarter) || 1) / 4)})
+                {fellowshipGrade === 'SRF' ? 'Senior Fellow (SRF)' : 'Junior Fellow (JRF)'}
               </h3>
             </div>
-            <Calendar size={20} style={{ color: '#1B7837' }} />
+            <TrendingUp size={20} style={{ color: '#1B7837' }} />
           </div>
           <p style={{ fontSize: '0.6875rem', color: '#718096', marginTop: '0.35rem' }}>
-            Monthly Fellowship Rate: ₹31,000 + Contingency
+            Monthly Rate: ₹{monthlyStipendRate.toLocaleString('en-IN')} (Q{fellowship.current_quarter})
           </p>
         </div>
 
@@ -290,13 +371,40 @@ export const FellowshipPortal: React.FC<FellowshipPortalProps> = ({ applicantId 
             </p>
           </div>
 
-          <button
-            onClick={() => setIsContinuationModalOpen(true)}
-            className="btn btn-primary btn-sm"
-          >
-            + Submit Q{fellowship.current_quarter} Continuation Report
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setIsGuideModalOpen(true)}
+              className="btn btn-secondary btn-sm"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            >
+              <ShieldCheck size={14} style={{ color: '#1A4D8F' }} /> Guide 1-Click Sign-Off
+            </button>
+            <button
+              onClick={() => setIsContinuationModalOpen(true)}
+              className="btn btn-primary btn-sm"
+            >
+              + Submit Q{fellowship.current_quarter} Continuation Report
+            </button>
+          </div>
         </div>
+
+        {guideSignoffSuccess && (
+          <div style={{
+            backgroundColor: '#DCFCE7',
+            border: '1px solid #86EFAC',
+            color: '#166534',
+            padding: '0.65rem 0.9rem',
+            borderRadius: '6px',
+            fontSize: '0.75rem',
+            marginBottom: '0.85rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem'
+          }}>
+            <CheckCircle2 size={16} style={{ color: '#16A34A', flexShrink: 0 }} />
+            <span><strong>Supervisor Attestation Recorded:</strong> {guideSignoffSuccess}</span>
+          </div>
+        )}
 
         {/* Continuation Reports Table */}
         <div style={{ overflowX: 'auto' }}>
@@ -349,6 +457,67 @@ export const FellowshipPortal: React.FC<FellowshipPortalProps> = ({ applicantId 
         </div>
       </div>
 
+      {/* SECTION 2.5: 2-YEAR DOCTORAL ASSESSMENT COMMITTEE & JRF -> SRF UPGRADATION */}
+      <div className="gov-card" style={{ borderLeft: '4px solid #7C3AED' }}>
+        <div className="gov-card-header">
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
+              <Sparkles size={18} style={{ color: '#7C3AED' }} />
+              <h3 style={{ fontSize: '1rem', color: '#0A2540', margin: 0 }}>
+                2.5 2-Year Doctoral Evaluation & JRF-to-SRF Elevation (FR-7.4)
+              </h3>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: '#718096', margin: 0 }}>
+              Statutory 3-member assessment committee elevates eligible JRF scholars (₹37,000/mo) to Senior Research Fellow (₹42,000/mo)
+            </p>
+          </div>
+
+          <span className={`badge ${fellowshipGrade === 'SRF' ? 'badge-success' : 'badge-warning'}`}>
+            {fellowshipGrade === 'SRF' ? '✓ Elevated to SRF (₹42,000/mo)' : 'Current Grade: JRF (₹37,000/mo)'}
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', alignItems: 'center' }}>
+          <div>
+            <p style={{ fontSize: '0.8125rem', color: '#334155', lineHeight: 1.5, marginBottom: '0.75rem' }}>
+              Upon successful completion of 2 years of doctoral research, presentation before the Doctoral Committee, and publication of at least 2 research papers, fellowship stipend increases from <strong>₹37,000 to ₹42,000 per month</strong> with higher contingency allowance.
+            </p>
+
+            {srfUpgradeNotes && (
+              <div style={{ backgroundColor: '#F5F3FF', border: '1px solid #DDD6FE', padding: '0.65rem 0.85rem', borderRadius: '6px', fontSize: '0.75rem', color: '#5B21B6', marginBottom: '0.75rem' }}>
+                <strong>Assessment Result:</strong> {srfUpgradeNotes}
+              </div>
+            )}
+
+            {fellowshipGrade === 'JRF' ? (
+              <button
+                onClick={handleUpgradeSrf}
+                disabled={isUpgradingSrf}
+                className="btn btn-primary"
+                style={{ backgroundColor: '#7C3AED', borderColor: '#7C3AED', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <TrendingUp size={15} />
+                {isUpgradingSrf ? 'Convening Committee...' : 'Convene Assessment Committee & Upgrade to SRF'}
+              </button>
+            ) : (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#166534', fontWeight: 600, fontSize: '0.8125rem', backgroundColor: '#DCFCE7', padding: '0.35rem 0.65rem', borderRadius: '4px' }}>
+                <CheckCircle2 size={16} /> SRF Grade Active: ₹42,000/month DBT Authorised
+              </div>
+            )}
+          </div>
+
+          <div style={{ backgroundColor: '#F8FAFC', padding: '0.875rem', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '0.75rem' }}>
+            <div style={{ fontWeight: 700, color: '#0A2540', marginBottom: '0.35rem' }}>Mandatory Statutory Criteria:</div>
+            <ul style={{ margin: 0, paddingLeft: '1.1rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <li>Completed 8 Quarters (24 months) of doctoral research</li>
+              <li>Satisfactory Guide Progress Reports & $\ge 75\%$ attendance</li>
+              <li>Minimum 2 research papers in UGC-CARE or SCOPUS indexed journals</li>
+              <li>Formal presentation before 3-member External Doctoral Committee</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       {/* SECTION 3: PH.D. THESIS REPOSITORY GATE (FR-7.3) */}
       <div className="gov-card" style={{ borderLeft: '4px solid #0056B3' }}>
         <div className="gov-card-header">
@@ -369,6 +538,30 @@ export const FellowshipPortal: React.FC<FellowshipPortalProps> = ({ applicantId 
             <p style={{ fontSize: '0.875rem', color: '#334155', marginBottom: '0.75rem', lineHeight: 1.5 }}>
               Under MoTA Fellowship Guidelines, the final quarter grant (₹93,000) is held in escrow until the scholar successfully deposits their Ph.D. research thesis into the <strong>National Tribal Research Repository</strong>.
             </p>
+
+            <div style={{ marginBottom: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={handleVerifyShodhganga}
+                disabled={isVerifyingShodhganga}
+                className="btn btn-secondary btn-sm"
+                style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <Sparkles size={13} style={{ color: '#0056B3' }} />
+                {isVerifyingShodhganga ? 'Querying INFLIBNET...' : 'Verify UGC Shodhganga Sync & Plagiarism Check (<10%)'}
+              </button>
+
+              {shodhgangaResult && (
+                <div style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: '6px', padding: '0.65rem 0.85rem', fontSize: '0.75rem', color: '#0369A1' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 700, marginBottom: '0.2rem' }}>
+                    <CheckCircle2 size={14} style={{ color: '#0284C7' }} />
+                    Shodhganga INFLIBNET Verified (UGC Compliant)
+                  </div>
+                  <div><strong>Archival Handle:</strong> <a href={shodhgangaResult.shodhgangaHandle} target="_blank" rel="noreferrer" style={{ color: '#0284C7', textDecoration: 'underline' }}>{shodhgangaResult.shodhgangaHandle}</a></div>
+                  <div><strong>Plagiarism Similarity:</strong> <span style={{ fontWeight: 700, color: '#16A34A' }}>{shodhgangaResult.plagiarismSimilarityScore}%</span> (Threshold: &lt; 10% permissible)</div>
+                </div>
+              )}
+            </div>
 
             {fellowship.thesis_archive_id ? (
               <div style={{ backgroundColor: '#EAF7EE', border: '1px solid #A3E0B5', padding: '0.85rem', borderRadius: '6px' }}>
@@ -510,6 +703,85 @@ export const FellowshipPortal: React.FC<FellowshipPortalProps> = ({ applicantId 
                   className="btn btn-primary"
                 >
                   {isSubmittingThesis ? 'Archiving...' : 'Archive Thesis & Unlock Grant'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Supervisor 1-Click Digital Sign-Off */}
+      {isGuideModalOpen && (
+        <div className="modal-backdrop" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(10, 37, 64, 0.75)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: '1rem'
+        }}>
+          <div className="gov-card" style={{ maxWidth: '520px', width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.75rem' }}>
+              <ShieldCheck size={20} style={{ color: '#1A4D8F' }} />
+              <h3 style={{ fontSize: '1.125rem', color: '#0A2540', margin: 0 }}>
+                Research Supervisor 1-Click Digital Sign-Off
+              </h3>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '1rem' }}>
+              Cryptographic guide token validation for instantaneous quarterly stipend release authorization.
+            </p>
+
+            <form onSubmit={handleGuideSignoff} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="form-group">
+                <label className="form-label">Supervisor Digital Access Token</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={guideToken}
+                  onChange={(e) => setGuideToken(e.target.value)}
+                  placeholder="e.g. GUIDE-TOKEN-JNU-2026"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Quarterly Scholar Performance Rating</label>
+                <select
+                  className="form-input"
+                  value={guideRating}
+                  onChange={(e) => setGuideRating(e.target.value)}
+                >
+                  <option value="OUTSTANDING">Outstanding - Exceeds Fieldwork Targets</option>
+                  <option value="VERY_GOOD">Very Good - Milestones Achieved on Schedule</option>
+                  <option value="SATISFACTORY">Satisfactory - Progress Compliant</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Supervisor Qualitative Assessment Notes</label>
+                <textarea
+                  className="form-input"
+                  rows={3}
+                  value={guideComments}
+                  onChange={(e) => setGuideComments(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsGuideModalOpen(false)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingGuideSignoff}
+                  className="btn btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <Send size={14} />
+                  {isSubmittingGuideSignoff ? 'Authorizing PFMS...' : 'Sign Off & Authorize PFMS Release'}
                 </button>
               </div>
             </form>

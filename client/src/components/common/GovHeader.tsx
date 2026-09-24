@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ShieldCheck,
   UserCheck,
@@ -10,8 +10,10 @@ import {
   Lock,
   Bell,
   Award,
-  LogOut
+  LogOut,
+  Building2
 } from 'lucide-react';
+import { MeeSevaKioskModal } from '../kiosk/MeeSevaKioskModal';
 
 interface GovHeaderProps {
   currentTab: string;
@@ -21,6 +23,10 @@ interface GovHeaderProps {
   onLogout: () => void;
   onOpenNotifications: () => void;
   unreadNotifsCount?: number;
+  hasActiveFellowship?: boolean;
+  onOpenKioskModal?: () => void;
+  isAuthorizedMode?: boolean;
+  onToggleAuthorizedMode?: () => void;
 }
 
 export const GovHeader: React.FC<GovHeaderProps> = ({
@@ -30,9 +36,16 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
   onOpenLogin,
   onLogout,
   onOpenNotifications,
-  unreadNotifsCount = 0
+  unreadNotifsCount = 0,
+  hasActiveFellowship = false,
+  onOpenKioskModal,
+  isAuthorizedMode = false,
+  onToggleAuthorizedMode
 }) => {
   const role = currentUser?.role || 'APPLICANT';
+
+  // MeeSeva / CSC Assisted Kiosk modal state
+  const [isKioskModalOpen, setIsKioskModalOpen] = useState(false);
 
   // Compute tabs strictly filtered by the active user's authorized role
   const getNavTabs = () => {
@@ -70,13 +83,23 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
           { id: 'waterfall', label: 'Spillover Waterfall Visualizer', icon: GitFork }
         ];
 
-      case 'APPLICANT':
-      default:
+      case 'KIOSK_OPERATOR':
         return [
-          { id: 'applicant', label: 'My Applications', icon: UserCheck },
-          { id: 'simulator', label: 'Eligibility Simulator', icon: Sparkles },
-          { id: 'fellowship', label: 'Fellowship Lifecycle (NFST)', icon: Award }
+          { id: 'kiosk', label: 'MeeSeva Kiosk Gateway', icon: Building2 },
+          { id: 'simulator', label: 'Eligibility Simulator', icon: Sparkles }
         ];
+
+      case 'APPLICANT':
+      default: {
+        const tabs = [
+          { id: 'applicant', label: 'My Applications', icon: UserCheck },
+          { id: 'simulator', label: 'Eligibility Simulator', icon: Sparkles }
+        ];
+        if (hasActiveFellowship) {
+          tabs.push({ id: 'fellowship', label: 'Fellowship Lifecycle (NFST)', icon: Award });
+        }
+        return tabs;
+      }
     }
   };
 
@@ -90,6 +113,7 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
       case 'STATE_NODAL': return 'State Nodal Officer (Tier 2)';
       case 'COMMITTEE': return 'Selection Committee Chair';
       case 'MOTA_ADMIN': return 'Ministry Super Administrator';
+      case 'KIOSK_OPERATOR': return 'MeeSeva / CSC Authorized VLE Operator';
       case 'APPLICANT':
       default:
         return currentUser.designationTitle || 'Citizen / ST Scholar';
@@ -141,30 +165,142 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
           </div>
         </div>
 
-        {/* Right Section: Authentication & Profile */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {!currentUser ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        {/* Right Section: Authentication, Overhauled Switch & Profile */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {/* Overhauled Kiosk Button: Interactive Switch to Toggle Authorized Mode ON or OFF (Login screen only) */}
+          {!currentUser && (
+            <div style={{ display: 'flex', alignItems: 'center' }}>
               <button
                 type="button"
-                onClick={() => onOpenLogin('citizen')}
-                className="btn btn-primary btn-sm"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8125rem', padding: '0.45rem 0.9rem' }}
+                onClick={onToggleAuthorizedMode}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.55rem',
+                  backgroundColor: isAuthorizedMode ? '#DCFCE7' : '#F1F5F9',
+                  border: `1.5px solid ${isAuthorizedMode ? '#86EFAC' : '#CBD5E1'}`,
+                  padding: '0.28rem 0.75rem 0.28rem 0.35rem',
+                  borderRadius: '24px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: isAuthorizedMode ? '0 0 10px rgba(34, 197, 94, 0.25)' : 'none'
+                }}
+                title={isAuthorizedMode ? "Authorized Mode Active: Empanelled SWAN Intranet. Click to toggle to Public Internet." : "Unauthorized Mode Active: Public Internet. Click to toggle to Authorized SWAN Intranet."}
               >
-                <Lock size={14} />
-                <span>Citizen Sign In</span>
-              </button>
+                {/* Switch Pill */}
+                <div style={{
+                  width: '38px',
+                  height: '22px',
+                  backgroundColor: isAuthorizedMode ? '#16A34A' : '#94A3B8',
+                  borderRadius: '12px',
+                  position: 'relative',
+                  transition: 'background-color 0.25s ease'
+                }}>
+                  <div style={{
+                    width: '18px',
+                    height: '18px',
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '50%',
+                    position: 'absolute',
+                    top: '2px',
+                    left: isAuthorizedMode ? '18px' : '2px',
+                    transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    {isAuthorizedMode ? (
+                      <ShieldCheck size={11} style={{ color: '#16A34A' }} />
+                    ) : (
+                      <Lock size={11} style={{ color: '#64748B' }} />
+                    )}
+                  </div>
+                </div>
 
-              <button
-                type="button"
-                onClick={() => onOpenLogin('officer')}
-                className="btn btn-secondary btn-sm"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8125rem', padding: '0.45rem 0.85rem' }}
-              >
-                <ShieldCheck size={14} />
-                <span>Officer SSO</span>
+                {/* Status Text */}
+                <div style={{ textAlign: 'left', lineHeight: 1.15 }}>
+                  <div style={{
+                    fontSize: '0.6875rem',
+                    fontWeight: 700,
+                    color: isAuthorizedMode ? '#15803D' : '#475569',
+                    letterSpacing: '0.02em',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem'
+                  }}>
+                    <span>{isAuthorizedMode ? 'AUTHORIZED MODE' : 'UNAUTHORIZED'}</span>
+                    <span style={{
+                      fontSize: '0.6rem',
+                      fontWeight: 800,
+                      padding: '0.1rem 0.35rem',
+                      borderRadius: '10px',
+                      backgroundColor: isAuthorizedMode ? '#16A34A' : '#64748B',
+                      color: '#FFFFFF'
+                    }}>
+                      {isAuthorizedMode ? 'ON' : 'OFF'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.625rem', color: isAuthorizedMode ? '#166534' : '#64748B' }}>
+                    {isAuthorizedMode ? 'MeeSeva SWAN Intranet' : 'Public Internet (Citizen)'}
+                  </div>
+                </div>
               </button>
             </div>
+          )}
+
+          {!currentUser ? (
+            /* Logins based on Authorized Mode */
+            !isAuthorizedMode ? (
+              /* Unauthorized Mode: ONLY Student Login */
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => onOpenLogin('citizen')}
+                  className="btn btn-primary btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8125rem', padding: '0.45rem 0.9rem' }}
+                  title="Citizen & ST Student Login via Aadhaar OTP"
+                >
+                  <Lock size={14} />
+                  <span>Student Sign In</span>
+                </button>
+              </div>
+            ) : (
+              /* Authorized Mode: 2 Logins (Registration and Officer SSO) */
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {/* 1. Registration Login / Modal Trigger */}
+                <button
+                  type="button"
+                  onClick={() => onOpenKioskModal ? onOpenKioskModal() : setIsKioskModalOpen(true)}
+                  className="btn btn-primary btn-sm"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    fontSize: '0.8125rem',
+                    padding: '0.45rem 0.9rem',
+                    backgroundColor: '#15803D',
+                    borderColor: '#166534'
+                  }}
+                  title="Launch MeeSeva / CSC Assisted Student Registration Terminal"
+                >
+                  <Building2 size={14} />
+                  <span>Kiosk Registration</span>
+                </button>
+
+                {/* 2. Officer SSO (which was previously beside student login) */}
+                <button
+                  type="button"
+                  onClick={() => onOpenLogin('officer')}
+                  className="btn btn-secondary btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8125rem', padding: '0.45rem 0.85rem' }}
+                  title="Official Jan Parichay Single Sign-On for Scrutiny & Committee Officers"
+                >
+                  <ShieldCheck size={14} />
+                  <span>Officer SSO</span>
+                </button>
+              </div>
+            )
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               {/* Notification Bell */}
@@ -305,6 +441,14 @@ export const GovHeader: React.FC<GovHeaderProps> = ({
           </div>
         </div>
       </nav>
+
+      {/* MeeSeva / CSC Assisted Kiosk Gateway Modal */}
+      {!onOpenKioskModal && (
+        <MeeSevaKioskModal
+          isOpen={isKioskModalOpen}
+          onClose={() => setIsKioskModalOpen(false)}
+        />
+      )}
     </header>
   );
 };

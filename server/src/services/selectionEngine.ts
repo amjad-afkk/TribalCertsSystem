@@ -19,7 +19,19 @@ export interface SpilloverTransition {
   fromTier: string;
   toTier: string;
   slotsShifted: number;
+  budgetShifted?: number;
   reason: string;
+}
+
+export interface TierBudgetSummary {
+  tierName: string;
+  sanctionedBudget: number;
+  unitCost: number;
+  budgetReceivedFromSpillover: number;
+  effectiveBudget: number;
+  committedExpenditure: number;
+  budgetSpilledOverOut: number;
+  unspentSurplus: number;
 }
 
 export interface WaterfallExecutionResult {
@@ -28,6 +40,10 @@ export interface WaterfallExecutionResult {
   totalAvailableSlots: number;
   totalFilledSlots: number;
   unfilledSlots: number;
+  totalSanctionedBudget: number;
+  totalCommittedExpenditure: number;
+  totalBudgetSurplus: number;
+  isBudgetConstrained: boolean;
   tierSummary: Record<string, {
     tierName: string;
     originalQuota: number;
@@ -36,6 +52,7 @@ export interface WaterfallExecutionResult {
     selectedCount: number;
     spilloverOut: number;
   }>;
+  tierBudgetSummary: Record<string, TierBudgetSummary>;
   transitions: SpilloverTransition[];
   allocatedSelections: {
     applicantId: string;
@@ -46,12 +63,14 @@ export interface WaterfallExecutionResult {
     allocatedTier: string;
     isSpillover: boolean;
     meritRank: number;
+    allocatedAwardCost?: number;
   }[];
 }
 
 export class SelectionEngine {
   /**
-   * Executes the 4-tier NFST Reservation Waterfall with auditable automatic spillover.
+   * Executes the 4-tier NFST Reservation Waterfall with auditable automatic spillover
+   * and dual-constraint (Slot Quota + Fiscal Ceiling GFR Virement) validation.
    * Priority: Divyangjan (PwD) -> PVTG -> Female ST -> ST Others
    */
   static runNfstWaterfall(
@@ -59,14 +78,24 @@ export class SelectionEngine {
     customTiers?: WaterfallTierConfig[]
   ): WaterfallExecutionResult {
     const defaultTiers: WaterfallTierConfig[] = [
-      { tier: 'DIVYANGJAN', label: 'Divyangjan (PwD ≥ 40%)', priority: 1, allocatedSlots: 38, spilloverTargetTier: 'PVTG' },
-      { tier: 'PVTG', label: 'Particularly Vulnerable Tribal Groups (PVTG)', priority: 2, allocatedSlots: 75, spilloverTargetTier: 'FEMALE_ST' },
-      { tier: 'FEMALE_ST', label: 'Female ST (30% Sub-quota)', priority: 3, allocatedSlots: 225, spilloverTargetTier: 'ST_GENERAL' },
-      { tier: 'ST_GENERAL', label: 'Open Scheduled Tribe (ST Others)', priority: 4, allocatedSlots: 412 }
+      { tier: 'DIVYANGJAN', label: 'Divyangjan (PwD ≥ 40%)', priority: 1, allocatedSlots: 38, spilloverTargetTier: 'PVTG', allocatedBudget: 19152000, unitCostPerAwardee: 504000 },
+      { tier: 'PVTG', label: 'Particularly Vulnerable Tribal Groups (PVTG)', priority: 2, allocatedSlots: 75, spilloverTargetTier: 'FEMALE_ST', allocatedBudget: 38700000, unitCostPerAwardee: 516000 },
+      { tier: 'FEMALE_ST', label: 'Female ST (30% Sub-quota)', priority: 3, allocatedSlots: 225, spilloverTargetTier: 'ST_GENERAL', allocatedBudget: 108000000, unitCostPerAwardee: 480000 },
+      { tier: 'ST_GENERAL', label: 'Open Scheduled Tribe (ST Others)', priority: 4, allocatedSlots: 412, allocatedBudget: 197760000, unitCostPerAwardee: 480000 }
     ];
 
-    const tiers = customTiers && customTiers.length > 0 ? customTiers : defaultTiers;
+    const tiers = (customTiers && customTiers.length > 0 ? customTiers : defaultTiers).map(t => {
+      const unitCost = t.unitCostPerAwardee || 480000;
+      const budget = t.allocatedBudget || ((t.allocatedSlots || 0) * unitCost);
+      return {
+        ...t,
+        unitCostPerAwardee: unitCost,
+        allocatedBudget: budget
+      };
+    });
+
     const totalSlots = tiers.reduce((acc, t) => acc + (t.allocatedSlots || 0), 0);
+    const totalSanctionedBudget = tiers.reduce((acc, t) => acc + (t.allocatedBudget || 0), 0);
 
     // Filter candidate pools
     const pools: Record<string, CandidateForSelection[]> = {
@@ -80,19 +109,39 @@ export class SelectionEngine {
     const fallbackGeneralPool: CandidateForSelection[] = [];
 
     const tierSummary: WaterfallExecutionResult['tierSummary'] = {};
+    const tierBudgetSummary: Record<string, TierBudgetSummary> = {};
     const transitions: SpilloverTransition[] = [];
     const selections: WaterfallExecutionResult['allocatedSelections'] = [];
 
-    let carriedSpillover = 0;
+    let carriedSpilloverSlots = 0;
+    let carriedSpilloverBudget = 0;
     let stepCount = 1;
+    let isBudgetConstrained = false;
 
     for (const t of tiers) {
       const origQuota = t.allocatedSlots || 0;
-      const effectiveQuota = origQuota + carriedSpillover;
+      const origBudget = t.allocatedBudget || 0;
+      const unitCost = t.unitCostPerAwardee || 480000;
+
+      const effectiveQuota = origQuota + carriedSpilloverSlots;
+      const effectiveBudget = origBudget + carriedSpilloverBudget;
       const candidatesInTier = pools[t.tier] || [];
 
-      const selectCount = Math.min(effectiveQuota, candidatesInTier.length);
-      const selectedForThisTier = candidatesInTier.slice(0, selectCount);
+      let tierCommitted = 0;
+      const selectedForThisTier: CandidateForSelection[] = [];
+
+      for (const cand of candidatesInTier) {
+        if (selectedForThisTier.length >= effectiveQuota) break;
+        if (tierCommitted + unitCost <= effectiveBudget) {
+          selectedForThisTier.push(cand);
+          tierCommitted += unitCost;
+        } else {
+          isBudgetConstrained = true;
+          break;
+        }
+      }
+
+      const selectCount = selectedForThisTier.length;
       const unselectedInThisTier = candidatesInTier.slice(selectCount);
 
       // Add unselected to general pool for open merit competition
@@ -106,50 +155,80 @@ export class SelectionEngine {
           meritScore: c.meritScore,
           originalCategory: c.category,
           allocatedTier: t.tier,
-          isSpillover: carriedSpillover > 0 && idx >= origQuota,
-          meritRank: selections.length + 1
+          isSpillover: carriedSpilloverSlots > 0 && idx >= origQuota,
+          meritRank: selections.length + 1,
+          allocatedAwardCost: unitCost
         });
       });
 
-      const spilloverToNext = effectiveQuota - selectCount;
+      const spilloverSlotsToNext = effectiveQuota - selectCount;
+      const spilloverBudgetToNext = Math.max(0, effectiveBudget - tierCommitted);
 
       tierSummary[t.tier] = {
         tierName: t.label,
         originalQuota: origQuota,
-        spilloverReceived: carriedSpillover,
+        spilloverReceived: carriedSpilloverSlots,
         finalQuota: effectiveQuota,
         selectedCount: selectCount,
-        spilloverOut: spilloverToNext
+        spilloverOut: spilloverSlotsToNext
       };
 
-      if (spilloverToNext > 0 && t.spilloverTargetTier) {
+      tierBudgetSummary[t.tier] = {
+        tierName: t.label,
+        sanctionedBudget: origBudget,
+        unitCost: unitCost,
+        budgetReceivedFromSpillover: carriedSpilloverBudget,
+        effectiveBudget: effectiveBudget,
+        committedExpenditure: tierCommitted,
+        budgetSpilledOverOut: spilloverBudgetToNext,
+        unspentSurplus: effectiveBudget - tierCommitted
+      };
+
+      if ((spilloverSlotsToNext > 0 || spilloverBudgetToNext > 0) && t.spilloverTargetTier) {
+        const budgetFormatted = (spilloverBudgetToNext / 100000).toFixed(2);
         transitions.push({
           step: stepCount++,
           fromTier: t.tier,
           toTier: t.spilloverTargetTier,
-          slotsShifted: spilloverToNext,
-          reason: `${t.label} had only ${selectCount} eligible applicants for ${effectiveQuota} available slots. Automatically cascading ${spilloverToNext} unfilled slots to ${t.spilloverTargetTier}.`
+          slotsShifted: spilloverSlotsToNext,
+          budgetShifted: spilloverBudgetToNext,
+          reason: `${t.label} had ${selectCount} eligible applicants for ${effectiveQuota} seats. Automatically cascading ${spilloverSlotsToNext} unfilled seats and ₹${budgetFormatted} Lakhs re-appropriated budget (GFR Virement) to ${t.spilloverTargetTier}.`
         });
-        carriedSpillover = spilloverToNext;
+        carriedSpilloverSlots = spilloverSlotsToNext;
+        carriedSpilloverBudget = spilloverBudgetToNext;
       } else {
-        carriedSpillover = 0;
+        carriedSpilloverSlots = 0;
+        carriedSpilloverBudget = 0;
       }
     }
 
     // Consume fallback general pool: candidates not selected in their sub-quota
-    // can compete on open merit for any remaining unfilled slots
+    // can compete on open merit for any remaining unfilled slots within remaining budget
     const totalFilledSoFar = selections.length;
     const remainingSlots = totalSlots - totalFilledSoFar;
-    if (remainingSlots > 0 && fallbackGeneralPool.length > 0) {
+    const currentTotalCommitted = selections.reduce((sum, s) => sum + (s.allocatedAwardCost || 480000), 0);
+    let remainingBudget = totalSanctionedBudget - currentTotalCommitted;
+
+    if (remainingSlots > 0 && fallbackGeneralPool.length > 0 && remainingBudget >= 480000) {
       // Remove already-selected candidates from fallback pool
       const selectedIds = new Set(selections.map(s => s.applicantId));
       const eligibleFallback = fallbackGeneralPool
         .filter(c => !selectedIds.has(c.applicantId))
         .sort((a, b) => b.meritScore - a.meritScore);
 
-      const fillCount = Math.min(remainingSlots, eligibleFallback.length);
-      for (let i = 0; i < fillCount; i++) {
-        const c = eligibleFallback[i];
+      const promotedCandidates: CandidateForSelection[] = [];
+      for (const c of eligibleFallback) {
+        if (promotedCandidates.length >= remainingSlots) break;
+        if (remainingBudget >= 480000) {
+          promotedCandidates.push(c);
+          remainingBudget -= 480000;
+        } else {
+          isBudgetConstrained = true;
+          break;
+        }
+      }
+
+      promotedCandidates.forEach((c) => {
         selections.push({
           applicantId: c.applicantId,
           applicationId: c.applicationId,
@@ -158,20 +237,24 @@ export class SelectionEngine {
           originalCategory: c.category,
           allocatedTier: 'ST_GENERAL_FALLBACK',
           isSpillover: true,
-          meritRank: selections.length + 1
+          meritRank: selections.length + 1,
+          allocatedAwardCost: 480000
         });
-      }
+      });
 
-      if (fillCount > 0) {
+      if (promotedCandidates.length > 0) {
         transitions.push({
           step: stepCount++,
           fromTier: 'FALLBACK_POOL',
           toTier: 'ST_GENERAL_FALLBACK',
-          slotsShifted: fillCount,
-          reason: `${fillCount} candidates from unfilled sub-quota tiers promoted to open merit pool to fill remaining slots.`
+          slotsShifted: promotedCandidates.length,
+          budgetShifted: promotedCandidates.length * 480000,
+          reason: `${promotedCandidates.length} candidates from unfilled sub-quota tiers promoted to open merit pool under available GFR fiscal buffer.`
         });
       }
     }
+
+    const finalCommitted = selections.reduce((sum, s) => sum + (s.allocatedAwardCost || 480000), 0);
 
     return {
       schemeId: 'scheme-nfst',
@@ -179,7 +262,12 @@ export class SelectionEngine {
       totalAvailableSlots: totalSlots,
       totalFilledSlots: selections.length,
       unfilledSlots: totalSlots - selections.length,
+      totalSanctionedBudget,
+      totalCommittedExpenditure: finalCommitted,
+      totalBudgetSurplus: totalSanctionedBudget - finalCommitted,
+      isBudgetConstrained,
       tierSummary,
+      tierBudgetSummary,
       transitions,
       allocatedSelections: selections
     };

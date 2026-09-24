@@ -141,5 +141,18 @@ export const schemas = {
     comments: { required: false, type: 'string' },
     academicYear: { required: false, type: 'string' },
     officerDesignation: { required: false, type: 'string' }
+  },
+  kioskOnboardStudent: {
+    studentName: { required: true, type: 'string', minLength: 2 },
+    category: { required: true, type: 'string' },
+    annualIncome: { required: true, type: 'number' },
+    schemeCode: { required: true, type: 'string' },
+    kioskCenterId: { required: true, type: 'string' },
+    vleOperatorId: { required: true, type: 'string' }
+  },
+  kioskVerifyUdid: {
+    udidNumber: { required: true, type: 'string', minLength: 4 },
+    studentName: { required: false, type: 'string' }
   }
 } as const;
+

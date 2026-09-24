@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import type { Scheme, Applicant } from '../../types';
-import { X, CheckCircle, Sparkles, Send, ShieldAlert, DownloadCloud, Upload, Trash2, FileText, AlertTriangle, RefreshCw } from 'lucide-react';
+import { X, CheckCircle, Sparkles, Send, ShieldAlert, DownloadCloud, Upload, Trash2, FileText, AlertTriangle, RefreshCw, ShieldCheck } from 'lucide-react';
 import { DigiLockerModal } from './DigiLockerModal';
+import { AadhaarMasker } from '../common/AadhaarMasker';
 
 interface DynamicApplicationFormProps {
   onClose: () => void;
@@ -35,6 +36,29 @@ export const DynamicApplicationForm: React.FC<DynamicApplicationFormProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDigiLockerOpen, setIsDigiLockerOpen] = useState(false);
+  const [isAadhaarMaskerOpen, setIsAadhaarMaskerOpen] = useState(false);
+
+  const handleMaskedAadhaarReady = (maskedFile: { dataUrl: string; hash: string; maskedAadhaar: string }) => {
+    setUploadedDocs(prev => [
+      ...prev.filter(d => d.docType !== 'AADHAAR'),
+      {
+        docType: 'AADHAAR',
+        fileName: `masked_aadhaar_${maskedFile.maskedAadhaar}.jpg`,
+        fileUrl: maskedFile.dataUrl,
+        status: 'DPDP_MASKED_VERIFIED',
+        ocrExtracted: {
+          maskedAadhaar: maskedFile.maskedAadhaar,
+          sha256Proof: maskedFile.hash,
+          dpdpCompliant: true,
+          zeroBiometricRetention: true
+        },
+        extracted: {
+          maskedAadhaar: maskedFile.maskedAadhaar,
+          sha256Proof: maskedFile.hash
+        }
+      }
+    ]);
+  };
 
   const handleImportDigiLockerDoc = (doc: {
     docType: string;
@@ -394,7 +418,25 @@ export const DynamicApplicationForm: React.FC<DynamicApplicationFormProps> = ({
                   Fetch tamper-proof credentials directly from DigiLocker or scan with AI OCR
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsAadhaarMaskerOpen(prev => !prev)}
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    backgroundColor: isAadhaarMaskerOpen ? '#1A4D8F' : '#F1F5F9',
+                    color: isAadhaarMaskerOpen ? '#FFFFFF' : '#1A4D8F',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.75rem',
+                    padding: '0.35rem 0.65rem'
+                  }}
+                >
+                  <ShieldCheck size={13} />
+                  {isAadhaarMaskerOpen ? 'Hide Masker' : 'Mask Aadhaar (DPDP 2023)'}
+                </button>
                 <button
                   type="button"
                   onClick={() => setIsDigiLockerOpen(true)}
@@ -417,6 +459,13 @@ export const DynamicApplicationForm: React.FC<DynamicApplicationFormProps> = ({
                 </span>
               </div>
             </div>
+
+            {/* In-Browser Aadhaar Redaction Tool */}
+            {isAadhaarMaskerOpen && (
+              <div style={{ marginBottom: '1rem' }}>
+                <AadhaarMasker onMaskedFileReady={handleMaskedAadhaarReady} />
+              </div>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
               {activeScheme?.documentChecklist.map((doc) => {
@@ -449,7 +498,9 @@ export const DynamicApplicationForm: React.FC<DynamicApplicationFormProps> = ({
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span className={`badge ${uploaded.status === 'DEFICIENCY_FLAGGED' ? 'badge-rejected' : 'badge-approved'}`} style={{ fontSize: '0.6875rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                               {uploaded.status === 'DEFICIENCY_FLAGGED' ? <AlertTriangle size={12} /> : <CheckCircle size={12} />}
-                              {uploaded.status === 'DEFICIENCY_FLAGGED' ? 'Deficiency Flagged' : uploaded.status === 'DIGILOCKER_VERIFIED' ? 'DigiLocker Verified' : 'AI Verified'}
+                              {uploaded.status === 'DEFICIENCY_FLAGGED' ? 'Deficiency Flagged' :
+                               uploaded.status === 'DIGILOCKER_VERIFIED' ? 'DigiLocker Verified' :
+                               uploaded.status === 'DPDP_MASKED_VERIFIED' ? 'DPDP Masked' : 'AI Verified'}
                             </span>
                             <button
                               type="button"

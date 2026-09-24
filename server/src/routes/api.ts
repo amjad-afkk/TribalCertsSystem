@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import { getAllSchemes, getSchemeById, createScheme } from '../controllers/schemeController.js';
-import { runSimulator } from '../controllers/simulatorController.js';
+import { runSimulator, getCareerRoadmap } from '../controllers/simulatorController.js';
 import {
   getApplications,
   getApplicationById,
   submitApplication,
   resubmitDeficiency
 } from '../controllers/applicationController.js';
+import { onboardKioskStudent, getKioskStats, verifyKioskUdid } from '../controllers/kioskController.js';
+import { verifyKioskCorsAndLicense } from '../middleware/kioskSecurity.js';
 import { reviewApplication, reviewDocument } from '../controllers/verificationController.js';
 import { extractAndVerifyDocument } from '../controllers/documentController.js';
 import { chatWithGemini } from '../controllers/chatbotController.js';
@@ -15,14 +17,23 @@ import {
   runNosSelectionSimulation,
   signOffSelection
 } from '../controllers/selectionController.js';
-import { getMoTaAnalytics } from '../controllers/analyticsController.js';
+import { getMoTaAnalytics, dispatchMobileVan } from '../controllers/analyticsController.js';
 import { sendOtp, verifyOtp, officerLogin } from '../controllers/authController.js';
 import {
   getFellowshipRecord,
   submitJoiningReport,
   submitContinuationReport,
-  submitThesis
+  submitThesis,
+  guideSignOff,
+  upgradeJrfToSrf,
+  verifyShodhgangaArchival
 } from '../controllers/fellowshipController.js';
+import {
+  searchInstitutes,
+  validateAisheCode,
+  calculateEscrowPlan,
+  getSahayakGuidance
+} from '../controllers/institutionController.js';
 import { getDigiLockerDocuments, verifyCertificateRegistry } from '../controllers/digilockerController.js';
 import { getNotifications, markNotificationRead, sendTestNudge } from '../controllers/notificationController.js';
 import { getDb } from '../db/connection.js';
@@ -44,6 +55,9 @@ router.get('/fellowship/:applicantId', getFellowshipRecord);
 router.post('/fellowship/joining', validateBody(schemas.submitJoining), submitJoiningReport);
 router.post('/fellowship/continuation', validateBody(schemas.submitContinuation), submitContinuationReport);
 router.post('/fellowship/thesis', validateBody(schemas.submitThesis), submitThesis);
+router.post('/fellowship/guide-signoff', guideSignOff);
+router.post('/fellowship/upgrade-srf', upgradeJrfToSrf);
+router.post('/fellowship/shodhganga-verify', verifyShodhgangaArchival);
 
 // DigiLocker Integration & QR Verification (FR-1.2, Section 5.4)
 router.get('/digilocker/documents', getDigiLockerDocuments);
@@ -63,12 +77,26 @@ router.post('/schemes', requireRoles(['MOTA_ADMIN']), validateBody(schemas.creat
 
 // Scholarship Twin Simulator (Open citizen self-service)
 router.post('/simulator/match', validateBody(schemas.simulatorMatch), runSimulator);
+router.post('/simulator/roadmap', getCareerRoadmap);
+
+// AISHE Directory & Institutional Anti-Scam Shield
+router.get('/institutes/search', searchInstitutes);
+router.post('/institutes/validate', validateAisheCode);
+router.post('/institutes/escrow-routing', calculateEscrowPlan);
+
+// Voice-First Jan-Jatiya Sahayak & Explainable Deficiency Resolver
+router.post('/deficiency/sahayak', getSahayakGuidance);
 
 // Applications
 router.get('/applications', getApplications);
 router.get('/applications/:id', getApplicationById);
 router.post('/applications', validateBody(schemas.submitApplication), submitApplication);
 router.post('/applications/:id/resubmit', resubmitDeficiency);
+
+// MeeSeva / CSC Assisted Kiosk Student Onboarding (Internal CORS & Government Intranet Protected)
+router.post('/kiosk/onboard-student', verifyKioskCorsAndLicense, validateBody(schemas.kioskOnboardStudent), onboardKioskStudent);
+router.post('/kiosk/verify-udid', verifyKioskCorsAndLicense, validateBody(schemas.kioskVerifyUdid), verifyKioskUdid);
+router.get('/kiosk/stats', verifyKioskCorsAndLicense, getKioskStats);
 
 // Verification & Scrutiny (Restricted to Nodal & Ministry Officers)
 router.post('/applications/:id/review', requireRoles(['INO', 'STATE_NODAL', 'MOTA_ADMIN']), validateBody(schemas.reviewApplication), reviewApplication);
@@ -87,6 +115,7 @@ router.post('/selection/sign-off', requireRoles(['COMMITTEE', 'MOTA_ADMIN']), va
 
 // MoTA Analytics & Heatmaps (Restricted to Officers & Administrators)
 router.get('/analytics', requireRoles(['INO', 'STATE_NODAL', 'COMMITTEE', 'MOTA_ADMIN']), getMoTaAnalytics);
+router.post('/analytics/dispatch-van', requireRoles(['INO', 'STATE_NODAL', 'COMMITTEE', 'MOTA_ADMIN']), dispatchMobileVan);
 
 
 // Applicant profiles list for demo switching

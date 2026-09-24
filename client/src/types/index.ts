@@ -17,6 +17,8 @@ export interface Scheme {
     priority: number;
     allocatedSlots?: number;
     spilloverTargetTier?: string;
+    allocatedBudget?: number;
+    unitCostPerAwardee?: number;
   }>;
   documentChecklist: Array<{
     docType: string;
@@ -86,7 +88,8 @@ export type UserRole =
   | 'INO'
   | 'STATE_NODAL'
   | 'COMMITTEE'
-  | 'MOTA_ADMIN';
+  | 'MOTA_ADMIN'
+  | 'KIOSK_OPERATOR';
 
 export interface PersonaConfig {
   id: string;

@@ -22,15 +22,27 @@ interface AuthModalProps {
   onClose: () => void;
   onLoginSuccess: (user: AuthenticatedUser) => void;
   initialTab?: 'citizen' | 'officer';
+  isAuthorizedMode?: boolean;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
   onLoginSuccess,
-  initialTab = 'citizen'
+  initialTab = 'citizen',
+  isAuthorizedMode = false
 }) => {
-  const [authTab, setAuthTab] = useState<'citizen' | 'officer'>(initialTab);
+  const [authTab, setAuthTab] = useState<'citizen' | 'officer'>(
+    isAuthorizedMode ? (initialTab || 'officer') : 'citizen'
+  );
+
+  useEffect(() => {
+    if (!isAuthorizedMode) {
+      setAuthTab('citizen');
+    } else {
+      setAuthTab(initialTab || 'officer');
+    }
+  }, [isAuthorizedMode, initialTab, isOpen]);
 
   // Citizen Aadhaar OTP states
   const [identifier, setIdentifier] = useState('XXXX-XXXX-4123');
@@ -43,7 +55,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [timerSeconds, setTimerSeconds] = useState(60);
 
   // Officer SSO states
-  const [officerDesignation, setOfficerDesignation] = useState<'INO' | 'STATE_NODAL' | 'COMMITTEE' | 'MOTA_ADMIN'>('INO');
+  const [officerDesignation, setOfficerDesignation] = useState<'INO' | 'STATE_NODAL' | 'COMMITTEE' | 'MOTA_ADMIN' | 'KIOSK_OPERATOR'>('INO');
   const [officerId, setOfficerId] = useState('INO-JH-2026-88');
   const [officerPin, setOfficerPin] = useState('1234');
   const [officerLoading, setOfficerLoading] = useState(false);
@@ -145,12 +157,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     handleSendOtp(personaId);
   };
 
-  const handleQuickSelectOfficer = (desig: 'INO' | 'STATE_NODAL' | 'COMMITTEE' | 'MOTA_ADMIN') => {
+  const handleQuickSelectOfficer = (desig: 'INO' | 'STATE_NODAL' | 'COMMITTEE' | 'MOTA_ADMIN' | 'KIOSK_OPERATOR') => {
     setOfficerDesignation(desig);
     if (desig === 'INO') setOfficerId('INO-MP-2026-102');
     if (desig === 'STATE_NODAL') setOfficerId('SNO-JH-GOV-441');
     if (desig === 'COMMITTEE') setOfficerId('COMM-CHAIR-MOTA-01');
     if (desig === 'MOTA_ADMIN') setOfficerId('MOTA-SUPER-ADMIN-SEC');
+    if (desig === 'KIOSK_OPERATOR') setOfficerId('VLE-MEESEVA-4912');
     setOfficerPin('1234');
   };
 
@@ -214,52 +227,60 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
         </div>
 
-        {/* Portal Tabs: Citizen vs Officer */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1.25rem' }}>
-          <button
-            type="button"
-            onClick={() => { setAuthTab('citizen'); setOtpSessionId(null); setOtpError(null); }}
-            style={{
-              padding: '0.65rem 1rem',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              borderRadius: '6px',
-              border: authTab === 'citizen' ? '2px solid #1A4D8F' : '1px solid #CBD5E1',
-              backgroundColor: authTab === 'citizen' ? '#EBF3FC' : '#F8FAFC',
-              color: authTab === 'citizen' ? '#1A4D8F' : '#4A5568',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              cursor: 'pointer'
-            }}
-          >
-            <UserCheck size={16} />
-            Citizen Login (Aadhaar OTP)
-          </button>
-
-          <button
-            type="button"
-            onClick={() => { setAuthTab('officer'); setOfficerError(null); }}
-            style={{
-              padding: '0.65rem 1rem',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              borderRadius: '6px',
-              border: authTab === 'officer' ? '2px solid #1A4D8F' : '1px solid #CBD5E1',
-              backgroundColor: authTab === 'officer' ? '#EBF3FC' : '#F8FAFC',
-              color: authTab === 'officer' ? '#1A4D8F' : '#4A5568',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              cursor: 'pointer'
-            }}
-          >
-            <ShieldCheck size={16} />
-            Official / Nodal SSO
-          </button>
-        </div>
+        {/* Portal Header / Tab Indicator based on Authorized Mode */}
+        {!isAuthorizedMode ? (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: '#F8FAFC',
+            border: '1px solid #E2E8F0',
+            borderRadius: '6px',
+            padding: '0.65rem 1rem',
+            marginBottom: '1.25rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <UserCheck size={18} style={{ color: '#1A4D8F' }} />
+              <div>
+                <strong style={{ fontSize: '0.875rem', color: '#0A2540', display: 'block' }}>
+                  Citizen & ST Student Login (Aadhaar OTP)
+                </strong>
+                <span style={{ fontSize: '0.7rem', color: '#64748B' }}>
+                  Aadhaar Act, 2016 Compliant DBT Direct Authentication
+                </span>
+              </div>
+            </div>
+            <span style={{ fontSize: '0.6875rem', backgroundColor: '#F1F5F9', color: '#475569', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 600 }}>
+              PUBLIC INTERNET
+            </span>
+          </div>
+        ) : (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: '#EBF3FC',
+            border: '1.5px solid #93C5FD',
+            borderRadius: '6px',
+            padding: '0.65rem 1rem',
+            marginBottom: '1.25rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <ShieldCheck size={18} style={{ color: '#1A4D8F' }} />
+              <div>
+                <strong style={{ fontSize: '0.875rem', color: '#0A2540', display: 'block' }}>
+                  Official Jan Parichay Single Sign-On
+                </strong>
+                <span style={{ fontSize: '0.7rem', color: '#475569' }}>
+                  Authorized Scrutiny Officials, State Nodal Officers & MoTA Committee
+                </span>
+              </div>
+            </div>
+            <span style={{ fontSize: '0.6875rem', backgroundColor: '#DCFCE7', color: '#166534', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 700 }}>
+              SWAN INTRANET
+            </span>
+          </div>
+        )}
 
         {/* TAB 1: CITIZEN AADHAAR OTP LOGIN */}
         {authTab === 'citizen' && (
@@ -461,6 +482,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <option value="STATE_NODAL">Tier 2: State Nodal Officer (SNO - Directorate)</option>
                 <option value="COMMITTEE">Selection Committee Chair (NOS & NFST Award)</option>
                 <option value="MOTA_ADMIN">MoTA Super Administrator (Ministry Level)</option>
+                <option value="KIOSK_OPERATOR">MeeSeva / CSC Kiosk Authorized Operator (VLE)</option>
               </select>
             </div>
 
@@ -550,6 +572,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   style={{ fontSize: '0.75rem' }}
                 >
                   👑 MoTA Super Admin
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickSelectOfficer('KIOSK_OPERATOR')}
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: '0.75rem', gridColumn: 'span 2', color: '#166534', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}
+                >
+                  🏪 MeeSeva / CSC Authorized VLE Operator
                 </button>
               </div>
             </div>

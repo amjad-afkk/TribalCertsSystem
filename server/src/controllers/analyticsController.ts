@@ -72,6 +72,94 @@ export const getMoTaAnalytics = (req: Request, res: Response) => {
       femaleStRepresentation: '46.8%'
     };
 
+    // 6. Tribal Saturation GIS Radar (District Saturation Index - DSI)
+    const districtSaturationRadar = [
+      {
+        district: 'Mayurbhanj',
+        state: 'Odisha',
+        tribalCensusPopulation: 1479795,
+        eligibleStStudents: 142000,
+        actualBeneficiaries: 112180,
+        dsiPercent: 79.0,
+        status: 'SATURATED',
+        dominantTribe: 'Santhal, Kolha',
+        mobileVanDispatched: false,
+        recommendedAction: 'Optimal saturation: Auto-renewal fast-track active; establish regional tribal mentoring cluster.'
+      },
+      {
+        district: 'Bastar',
+        state: 'Chhattisgarh',
+        tribalCensusPopulation: 958313,
+        eligibleStStudents: 89000,
+        actualBeneficiaries: 21360,
+        dsiPercent: 24.0,
+        status: 'COLD_SPOT',
+        dominantTribe: 'Maria, Muria Gond',
+        mobileVanDispatched: true,
+        recommendedAction: 'CRITICAL COLD SPOT: Deploy 3 Mobile CSC Vans; dispatch offline biometric sync kit to Tokapal & Darbha blocks.'
+      },
+      {
+        district: 'Rayagada',
+        state: 'Odisha',
+        tribalCensusPopulation: 541905,
+        eligibleStStudents: 52000,
+        actualBeneficiaries: 34840,
+        dsiPercent: 67.0,
+        status: 'MODERATE',
+        dominantTribe: 'Kondh, Dongria Kondh (PVTG)',
+        mobileVanDispatched: false,
+        recommendedAction: 'Target PVTG hamlet clusters with multilingual Jan-Jatiya Sahayak audio nudges.'
+      },
+      {
+        district: 'Nandurbar',
+        state: 'Maharashtra',
+        tribalCensusPopulation: 1111282,
+        eligibleStStudents: 98000,
+        actualBeneficiaries: 27440,
+        dsiPercent: 28.0,
+        status: 'COLD_SPOT',
+        dominantTribe: 'Bhil, Pawara',
+        mobileVanDispatched: true,
+        recommendedAction: 'COLD SPOT ALERT: Low female enrolment in Dhadgaon block. Dispatch outreach camp with offline mesh sync.'
+      },
+      {
+        district: 'Mandla',
+        state: 'Madhya Pradesh',
+        tribalCensusPopulation: 579607,
+        eligibleStStudents: 56000,
+        actualBeneficiaries: 44240,
+        dsiPercent: 79.0,
+        status: 'SATURATED',
+        dominantTribe: 'Gond, Baiga (PVTG)',
+        mobileVanDispatched: false,
+        recommendedAction: 'Benchmark district: Replicate Baiga community peer-volunteer model in neighbouring Dindori.'
+      },
+      {
+        district: 'Paschim Medinipur',
+        state: 'West Bengal',
+        tribalCensusPopulation: 880015,
+        eligibleStStudents: 74000,
+        actualBeneficiaries: 23680,
+        dsiPercent: 32.0,
+        status: 'COLD_SPOT',
+        dominantTribe: 'Santhal, Lodha (PVTG)',
+        mobileVanDispatched: true,
+        recommendedAction: 'COLD SPOT: Deploy Mobile CSC Bus to Binpur & Jhargram fringe border hamlets.'
+      },
+      {
+        district: 'Ranchi',
+        state: 'Jharkhand',
+        tribalCensusPopulation: 1042000,
+        eligibleStStudents: 95000,
+        actualBeneficiaries: 72200,
+        dsiPercent: 76.0,
+        status: 'SATURATED',
+        dominantTribe: 'Munda, Oraon',
+        mobileVanDispatched: false,
+        recommendedAction: 'High saturation in urban blocks. Ensure spillover camps reach rural Sonahatu block.'
+      }
+    ];
+
     res.json({
       success: true,
       timestamp: new Date().toISOString(),
@@ -80,12 +168,31 @@ export const getMoTaAnalytics = (req: Request, res: Response) => {
         totalSelected: totalSelected + 1920,
         totalUnderScrutiny: totalUnderScrutiny + 410,
         totalDeficiencyFlagged: totalFlagged + 250,
-        totalDbtDisbursedInr: '₹48,72,50,000'
+        totalDbtDisbursedInr: '₹48,72,50,000',
+        averageDsiPercent: 55.0,
+        coldSpotsCount: 3,
+        activeMobileVans: 3
       },
       schemeDistribution: schemeStats,
       bottleneckAnalytics: stateTurnaround,
       deficiencyHeatmap,
-      inclusionMetrics
+      inclusionMetrics,
+      districtSaturationRadar
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+export const dispatchMobileVan = (req: Request, res: Response): void => {
+  try {
+    const { district, blocks } = req.body;
+    const cleanDistrict = district || 'Target Tribal District';
+    res.json({
+      success: true,
+      message: `Mobile CSC Outreach Van successfully dispatched to ${cleanDistrict} (${blocks || 'All tribal fringe blocks'}). Offline biometric sync activated.`,
+      dispatchId: `CSC-VAN-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      timestamp: new Date().toISOString()
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });

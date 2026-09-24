@@ -3,9 +3,11 @@ import { api } from '../../services/api';
 import type { ApplicationItem, Applicant } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
 import { DocumentVerificationModal } from '../common/DocumentVerificationModal';
+import { JanJatiyaSahayakModal } from '../common/JanJatiyaSahayakModal';
+import { AisheEscrowCard } from '../common/AisheEscrowCard';
 import {
   FileText, AlertTriangle, CheckCircle, Clock,
-  PlusCircle, RefreshCw, Send, ShieldCheck, Upload, FileSearch
+  PlusCircle, RefreshCw, Send, ShieldCheck, Upload, FileSearch, Volume2
 } from 'lucide-react';
 
 interface ApplicantPortalProps {
@@ -22,6 +24,11 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
     applicant?: any;
     scheme?: any;
     applicationId?: string;
+  } | null>(null);
+  const [sahayakModal, setSahayakModal] = useState<{
+    isOpen: boolean;
+    applicantName: string;
+    deficiencyReason: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [resubmitTextMap, setResubmitTextMap] = useState<Record<string, string>>({});
@@ -388,17 +395,53 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
 
                       {isFlagged && app.deficiencyReason && (
                         <div style={{
-                          marginTop: '0.5rem',
-                          padding: '0.5rem 0.75rem',
+                          marginTop: '0.65rem',
+                          padding: '0.65rem 0.85rem',
                           backgroundColor: '#FFFFFF',
-                          borderLeft: '3px solid #DC2626',
-                          fontSize: '0.75rem',
-                          color: '#991B1B',
-                          fontWeight: 500
+                          borderLeft: '4px solid #DC2626',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: '0.5rem'
                         }}>
-                          <strong>Action Required:</strong> {app.deficiencyReason}
+                          <div style={{ fontSize: '0.75rem', color: '#991B1B', fontWeight: 600, flex: 1 }}>
+                            <strong>Action Required:</strong> {app.deficiencyReason}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setSahayakModal({
+                              isOpen: true,
+                              applicantName: applicant?.name || 'Applicant',
+                              deficiencyReason: app.deficiencyReason || ''
+                            })}
+                            className="btn btn-secondary btn-sm"
+                            style={{
+                              fontSize: '0.75rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.4rem',
+                              backgroundColor: '#FEF3C7',
+                              borderColor: '#F59E0B',
+                              color: '#92400E',
+                              fontWeight: 700
+                            }}
+                          >
+                            <Volume2 size={15} style={{ color: '#D97706' }} /> Jan-Jatiya Sahayak • Listen in Native Dialect
+                          </button>
                         </div>
                       )}
+
+                      {/* AISHE Institutional Anti-Fraud & Dual Escrow Card */}
+                      <div style={{ marginTop: '0.85rem' }}>
+                        <AisheEscrowCard
+                          schemeCode={app.schemeCode}
+                          totalAwardAmount={app.schemeCode === 'ARG43' ? 250000 : app.schemeCode === 'ARG45' ? 480000 : 120000}
+                          instituteName={app.instituteName}
+                          aadhaarMasked={app.aadhaarMasked}
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -546,6 +589,16 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({ currentRole, o
           applicant={modalInspectionDossier.applicant}
           scheme={modalInspectionDossier.scheme}
           applicationId={modalInspectionDossier.applicationId}
+        />
+      )}
+
+      {/* Jan-Jatiya Sahayak Multilingual Audio & Fix Guidance Modal */}
+      {sahayakModal && sahayakModal.isOpen && (
+        <JanJatiyaSahayakModal
+          isOpen={sahayakModal.isOpen}
+          onClose={() => setSahayakModal(null)}
+          applicantName={sahayakModal.applicantName}
+          deficiencyReason={sahayakModal.deficiencyReason}
         />
       )}
     </div>

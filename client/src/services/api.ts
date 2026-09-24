@@ -105,6 +105,41 @@ export const api = {
       body: JSON.stringify(criteria)
     });
   },
+  getCareerRoadmap: async (criteria: any) => {
+    return safeFetch('/simulator/roadmap', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(criteria)
+    });
+  },
+
+  // AISHE Directory & Institutional Anti-Scam Shield
+  searchInstitutes: async (query: string = '') => {
+    return safeFetch(`/institutes/search?q=${encodeURIComponent(query)}`, { headers: getHeaders() });
+  },
+  validateAisheCode: async (aisheCode: string) => {
+    return safeFetch('/institutes/validate', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ aisheCode })
+    });
+  },
+  calculateEscrowPlan: async (payload: { schemeCode: string; totalAwardAmount: number; aisheCode: string; aadhaarMasked?: string }) => {
+    return safeFetch('/institutes/escrow-routing', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+  },
+
+  // Voice-First Jan-Jatiya Sahayak & Explainable Deficiency
+  getSahayakGuidance: async (payload: { deficiencyText: string; applicantName: string; language: string }) => {
+    return safeFetch('/deficiency/sahayak', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+  },
 
   // Applications
   getApplications: async (params?: Record<string, string>) => {
@@ -128,6 +163,37 @@ export const api = {
       body: JSON.stringify(payload)
     });
   },
+  // MeeSeva / CSC Assisted Kiosk Student Onboarding (Internal Network & CORS Protected)
+  onboardKioskStudent: async (payload: any, networkHeaders?: Record<string, string>) => {
+    return safeFetch('/kiosk/onboard-student', {
+      method: 'POST',
+      headers: {
+        ...getHeaders(),
+        ...(networkHeaders || {})
+      },
+      body: JSON.stringify(payload)
+    });
+  },
+  verifyKioskUdid: async (payload: { udidNumber: string; studentName?: string }, networkHeaders?: Record<string, string>) => {
+    return safeFetch('/kiosk/verify-udid', {
+      method: 'POST',
+      headers: {
+        ...getHeaders(),
+        ...(networkHeaders || {})
+      },
+      body: JSON.stringify(payload)
+    });
+  },
+  getKioskStats: async (kioskCenterId?: string, networkHeaders?: Record<string, string>) => {
+    const q = kioskCenterId ? `?kioskCenterId=${encodeURIComponent(kioskCenterId)}` : '';
+    return safeFetch(`/kiosk/stats${q}`, {
+      headers: {
+        ...getHeaders(),
+        ...(networkHeaders || {})
+      }
+    });
+  },
+
 
   // Verification review
   reviewApplication: async (id: string, payload: any) => {
@@ -178,6 +244,13 @@ export const api = {
   // Analytics
   getAnalytics: async () => {
     return safeFetch('/analytics', { headers: getHeaders() });
+  },
+  dispatchMobileVan: async (payload: { district: string; blocks?: string }) => {
+    return safeFetch('/analytics/dispatch-van', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
   },
 
   // Applicants
@@ -243,6 +316,27 @@ export const api = {
   },
   submitThesis: async (payload: { fellowshipId: string; thesisTitle: string; synopsisSummary?: string }) => {
     return safeFetch('/fellowship/thesis', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+  },
+  guideSignOff: async (payload: { fellowshipId: string; guideToken?: string; guideComments?: string; rating?: string }) => {
+    return safeFetch('/fellowship/guide-signoff', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+  },
+  upgradeJrfToSrf: async (payload: { fellowshipId: string; assessmentCommitteeNotes?: string; publishedPapersCount?: number }) => {
+    return safeFetch('/fellowship/upgrade-srf', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+  },
+  verifyShodhgangaArchival: async (payload: { thesisTitle?: string; candidateName?: string; university?: string }) => {
+    return safeFetch('/fellowship/shodhganga-verify', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(payload)
